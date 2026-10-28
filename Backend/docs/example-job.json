@@ -1,0 +1,35 @@
+﻿{
+    "jobId":  "9239c76eba02",
+    "sessionId":  "a49f075f6ad3",
+    "method":  "cpsat",
+    "status":  "done",
+    "startedAt":  1793159845892,
+    "elapsedSec":  25.7,
+    "config":  {
+                   "timeLimitSec":  20,
+                   "seed":  1,
+                   "workers":  8,
+                   "weights":  null
+               },
+    "progress":  {
+                     "elapsed":  16.3,
+                     "objective":  144,
+                     "bound":  54,
+                     "solutions":  21
+                 },
+    "objective":  144,
+    "solverStatus":  "FEASIBLE",
+    "bound":  54,
+    "solverWallSec":  20.14,
+    "culprits":  null,
+    "details":  null,
+    "unplaced":  null,
+    "valid":  true,
+    "violations":  0,
+    "metrics":  {
+                    "teacher_gaps":  0,
+                    "group_balance_dev":  28.8,
+                    "group_max_per_day":  4
+                },
+    "finishedAt":  1793159871608
+}

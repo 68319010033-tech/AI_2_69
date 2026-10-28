@@ -1,7 +1,6 @@
-import axios from 'axios'
+import { http, downloadFile } from '@/auth'
 
-const MOCK = true
-const http = axios.create({ baseURL: '/api' })
+const MOCK = import.meta.env.DEV && import.meta.env.VITE_MOCK_TIMETABLE === 'true'
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const MOCK_SCHEDULE = [
@@ -44,6 +43,7 @@ function normJob(j) {
 const normSchedule = (r) => (Array.isArray(r) ? { items: r } : r)
 
 export const api = {
+    download: downloadFile,
 
     async startJob({ sessionId, timeLimitSec, method, seed = 42, workers = 8, weights }) {
         if (MOCK) {
@@ -102,7 +102,7 @@ export const api = {
             }
         }
         const r = (await http.post('/validate', { sessionId })).data
-        return { ...r, log: r.log ?? r.cleaningLog ?? [] }
+        return { ...r, log: r.log ?? r.cleaningLog ?? r.logPreview ?? [] }
     },
     cleanedUrl: (sid, file) => `/api/cleaned/${sid}/${file}`,
     solutionUrl: (sid) => `/api/export/${sid}/solution.csv`,
@@ -116,7 +116,14 @@ export const api = {
             for (let i = 1; i <= 12; i++) hardChecks['c' + String(i).padStart(2, '0')] = { pass: true, violations: 0 }
             return { valid: true, hardChecks, softMetrics: { teacherGaps: 12, groupMaxPerDay: 6, solveTimeSec: 8.0 } }
         }
-        return (await http.get(`/report/${sid}`)).data
+        const data = (await http.get(`/report/${sid}`)).data
+        const report = data.reports?.[data.activeMethod]
+        if (!report?.check) return { valid: false, hardChecks: {}, softMetrics: {} }
+        return {
+            valid: report.check.valid,
+            hardChecks: Object.fromEntries(Object.entries(report.check.hard || {}).map(([key, value]) => [key, { ...value, violations: value.count }])),
+            softMetrics: { teacherGaps: report.check.metrics?.teacher_gaps, groupMaxPerDay: report.check.metrics?.group_max_per_day, solveTimeSec: report.wall },
+        }
     },
     async health() { return (await http.get('/health')).data },
     async upload(files) {

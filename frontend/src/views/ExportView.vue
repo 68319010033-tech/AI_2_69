@@ -71,7 +71,7 @@ const metrics = computed(() =>
       <!-- ดาวน์โหลด -->
       <div class="mt-6 grid gap-4 md:grid-cols-3">
         <a
-          :href="api.solutionUrl(sid)"
+          :href="api.solutionUrl(sid)" @click.prevent="api.download(api.solutionUrl(sid))"
           download="solution.csv"
           class="rounded-xl bg-primary-600 p-5 text-white shadow-sm transition hover:bg-primary-700"
         >
@@ -80,7 +80,7 @@ const metrics = computed(() =>
           <div class="text-sm opacity-90">ไฟล์คำตอบที่ส่งตรวจ (UTF-8 BOM)</div>
         </a>
         <a
-          :href="api.reportUrl(sid)"
+          :href="api.reportUrl(sid)" @click.prevent="api.download(api.reportUrl(sid))"
           download="report.md"
           class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50"
         >
@@ -89,7 +89,7 @@ const metrics = computed(() =>
           <div class="text-sm text-slate-500">รายงานสำหรับผู้ใช้งาน</div>
         </a>
         <a
-          :href="api.cleaningLogUrl(sid)"
+          :href="api.cleaningLogUrl(sid)" @click.prevent="api.download(api.cleaningLogUrl(sid))"
           download="cleaning-log"
           class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50"
         >
@@ -145,7 +145,7 @@ const metrics = computed(() =>
           <a
             v-for="f in REQUIRED_FILES"
             :key="f"
-            :href="api.cleanedUrl(sid, f)"
+            :href="api.cleanedUrl(sid, f)" @click.prevent="api.download(api.cleanedUrl(sid, f))"
             download
             class="rounded-lg border border-primary-500 px-2.5 py-1 text-primary-700 hover:bg-primary-50"
           >⬇ {{ f }}</a>

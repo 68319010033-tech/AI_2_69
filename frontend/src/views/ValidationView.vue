@@ -173,7 +173,7 @@ const files = computed(() => [...new Set(store.log.map((l) => l.file))])
         <a
           v-for="f in files"
           :key="f"
-          :href="api.cleanedUrl(store.sessionId, f)"
+          :href="api.cleanedUrl(store.sessionId, f)" @click.prevent="api.download(api.cleanedUrl(store.sessionId, f))"
           download
           class="rounded-lg border border-primary-500 px-2.5 py-1 text-primary-700 hover:bg-primary-50"
         >⬇ {{ f }}</a>
