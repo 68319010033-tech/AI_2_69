@@ -4,21 +4,66 @@ let rtdb = null;
 let mem = {};
 
 function init() {
-  const url = process.env.FIREBASE_DATABASE_URL;
-  const b64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  const url = process.env.FIREBASE_DATABASE_URL ? process.env.FIREBASE_DATABASE_URL.trim() : '';
+  const b64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64 ? process.env.FIREBASE_SERVICE_ACCOUNT_B64.trim() : '';
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT ? process.env.FIREBASE_SERVICE_ACCOUNT.trim() : '';
+
   if (url && (b64 || raw)) {
     try {
       const admin = require('firebase-admin');
-      const cred = JSON.parse(b64 ? Buffer.from(b64, 'base64').toString('utf8') : raw);
-      admin.initializeApp({ credential: admin.credential.cert(cred), databaseURL: url });
+      let credJson = '';
+
+      if (b64) {
+        if (b64.startsWith('{')) {
+          // User accidentally pasted raw JSON into FIREBASE_SERVICE_ACCOUNT_B64 directly
+          credJson = b64;
+        } else {
+          // Strip any accidental wrapping quotes or spaces/newlines from copy-paste
+          const clean = b64.replace(/^["']|["']$/g, '').replace(/\s+/g, '');
+          credJson = Buffer.from(clean, 'base64').toString('utf8');
+        }
+      } else if (raw) {
+        credJson = raw;
+      }
+
+      let cred;
+      try {
+        cred = JSON.parse(credJson);
+      } catch (jsonErr) {
+        console.error('[db] Service account credential is not valid JSON:', jsonErr.message);
+        console.error('[db] Decoded text preview (first 80 chars):', credJson.slice(0, 80));
+        throw new Error('Invalid service account JSON: ' + jsonErr.message);
+      }
+
+      if (cred.private_key && typeof cred.private_key === 'string') {
+        cred.private_key = cred.private_key.replace(/\\n/g, '\n');
+      }
+
+      if (!cred.client_email || !cred.private_key) {
+        throw new Error('Service account is missing client_email or private_key');
+      }
+
+      const cleanUrl = url.replace(/\/+$/, '');
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          credential: admin.credential.cert(cred),
+          databaseURL: cleanUrl
+        });
+      }
       rtdb = admin.database();
       mode = 'firebase';
+      console.log(`[db] Firebase Realtime Database connected (${cred.project_id || 'ok'})`);
     } catch (e) {
-      throw new Error('Firebase initialization failed', { cause: e });
+      console.error('[db] Firebase initialization failed:', e.message);
+      throw new Error(`Firebase initialization failed: ${e.message}`, { cause: e });
     }
   } else {
-    if (process.env.NODE_ENV === 'production') throw new Error('Firebase is required in production');
+    if (process.env.NODE_ENV === 'production') {
+      const missing = [];
+      if (!url) missing.push('FIREBASE_DATABASE_URL');
+      if (!b64 && !raw) missing.push('FIREBASE_SERVICE_ACCOUNT_B64');
+      throw new Error(`Firebase is required in production. Missing: ${missing.join(', ')}`);
+    }
     console.warn('[db] Firebase env not set -> in-memory fallback (data lost on restart)');
   }
   return mode;

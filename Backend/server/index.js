@@ -9,4 +9,10 @@ async function start() {
   const port = process.env.PORT || 3000;
   app.listen(port, () => console.log(`Server on :${port} (db: ${mode})`));
 }
-start().catch(e => { console.error(e.message); process.exitCode = 1; });
+start().catch(e => {
+  console.error('[Startup Error]', e.message);
+  if (e.cause && e.cause.message !== e.message) {
+    console.error('[Cause]', e.cause.message || e.cause);
+  }
+  process.exitCode = 1;
+});
