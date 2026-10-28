@@ -109,7 +109,15 @@ export const api = {
     reportUrl: (sid) => `/api/export/${sid}/report.md`,
     cleaningLogUrl: (sid) => `/api/cleaning-log/${sid}`,
     async compare(sid) { return (await http.get(`/compare/${sid}`)).data },
-    async report(sid) { return (await http.get(`/report/${sid}`)).data },
+    async report(sid) {
+        if (MOCK) {
+            await sleep(400)
+            const hardChecks = {}
+            for (let i = 1; i <= 12; i++) hardChecks['c' + String(i).padStart(2, '0')] = { pass: true, violations: 0 }
+            return { valid: true, hardChecks, softMetrics: { teacherGaps: 12, groupMaxPerDay: 6, solveTimeSec: 8.0 } }
+        }
+        return (await http.get(`/report/${sid}`)).data
+    },
     async health() { return (await http.get('/health')).data },
     async upload(files) {
         if (MOCK) {
