@@ -23,13 +23,66 @@ const MOCK_SCHEDULE = [
     offering_id, day, start_period, periods, room_id, teacher_id, group_id, course_id,
 }))
 
+const MOCK_INFEASIBLE = false // เปลี่ยนเป็น true เพื่อทดสอบกรณีจัดตารางไม่ได้
+let mockJob = null
+
+
+const DONE = ['done', 'completed', 'complete', 'success', 'finished']
+const FAIL = ['failed', 'error', 'infeasible']
+
+function normJob(j) {
+    const s = String(j.status || '').toLowerCase()
+    const status = DONE.includes(s) ? 'done' : FAIL.includes(s) ? 'failed' : 'running'
+    const gap =
+        j.objective != null && j.bound != null
+            ? Math.abs(j.objective - j.bound) / Math.max(Math.abs(j.objective), 1)
+            : j.gap
+    const reasons = (j.culprits || []).map((c) => (typeof c === 'string' ? c : c.message || JSON.stringify(c)))
+    return { ...j, status, gap, bestSoFar: j.objective, message: j.error, reasons }
+}
+
+const normSchedule = (r) => (Array.isArray(r) ? { items: r } : r)
+
 export const api = {
-    async schedule(sessionId) {
+
+    async startJob({ sessionId, timeLimitSec, method, seed = 42, workers = 8, weights }) {
+        if (MOCK) {
+            await sleep(300)
+            mockJob = { start: Date.now(), timeLimitSec, method }
+            return { jobId: 'mock-job-1' }
+        }
+        return (await http.post('/generate', { sessionId, method, timeLimitSec, seed, workers, weights })).data
+    },
+
+    async getJob(jobId) {
+        if (MOCK) {
+            await sleep(100)
+            const elapsedSec = (Date.now() - mockJob.start) / 1000
+            const total = Math.min(mockJob.timeLimitSec, 8) // mock จบเร็วสุด 8 วิ
+            if (elapsedSec < total) {
+                return { status: 'running', elapsedSec, bestSoFar: Math.round(400 - 300 * (elapsedSec / total)) }
+            }
+            if (MOCK_INFEASIBLE) {
+                return {
+                    status: 'failed', solverStatus: 'INFEASIBLE', elapsedSec: total,
+                    message: 'ไม่สามารถจัดตารางให้ครบทุกรายการได้',
+                    reasons: ['ครู T04 มีคาบที่ต้องสอนมากกว่า max_periods_per_week', 'รายการ O021 (3 คาบ) ไม่มีห้อง COMPUTER ว่างพอ'],
+                }
+            }
+            return {
+                status: 'done', solverStatus: mockJob.method === 'cpsat' ? 'OPTIMAL' : 'FEASIBLE',
+                elapsedSec: total, objective: 100, bestSoFar: 100, gap: 0.04,
+                config: { seed: 42, timeLimit: mockJob.timeLimitSec },
+            }
+        }
+        return normJob((await http.get(`/jobs/${jobId}`)).data)
+    },
+    async schedule(sessionId, method = 'cpsat') {
         if (MOCK) {
             await sleep(500)
-            return MOCK_SCHEDULE
+            return { items: MOCK_SCHEDULE }
         }
-        return (await http.get(`/schedule/${sessionId}`)).data
+        return normSchedule((await http.get(`/schedule/${sessionId}`, { params: { method } })).data)
     },
     async validate(sessionId) {
         if (MOCK) {
@@ -48,16 +101,23 @@ export const api = {
                 ],
             }
         }
-        return (await http.post('/validate', { sessionId })).data
+        const r = (await http.post('/validate', { sessionId })).data
+        return { ...r, log: r.log ?? r.cleaningLog ?? [] }
     },
-    cleanedUrl: (sessionId, file) => `/api/cleaned/${sessionId}/${file}`,
+    cleanedUrl: (sid, file) => `/api/cleaned/${sid}/${file}`,
+    solutionUrl: (sid) => `/api/export/${sid}/solution.csv`,
+    reportUrl: (sid) => `/api/export/${sid}/report.md`,
+    cleaningLogUrl: (sid) => `/api/cleaning-log/${sid}`,
+    async compare(sid) { return (await http.get(`/compare/${sid}`)).data },
+    async report(sid) { return (await http.get(`/report/${sid}`)).data },
+    async health() { return (await http.get('/health')).data },
     async upload(files) {
         if (MOCK) {
             await sleep(800)
             return { sessionId: 'mock-session-1' }
         }
         const fd = new FormData()
-        files.forEach((f) => fd.append('files', f))
+        files.forEach((f) => fd.append('files', f, f.name))
         return (await http.post('/upload', fd)).data
     },
 }
