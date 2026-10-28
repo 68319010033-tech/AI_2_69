@@ -23,14 +23,37 @@ router.get('/schedule/:sid', ah(async (req, res) => {
   const d = await loadCleaned(req.params.sid);
   const off = Object.fromEntries(d.offerings.map((o) => [o.offering_id, o]));
   const course = Object.fromEntries(d.courses.map((c) => [c.course_id, c]));
+  const teacher = Object.fromEntries(d.teachers.map((t) => [t.teacher_id, t]));
+  const room = Object.fromEntries(d.rooms.map((r) => [r.room_id, r]));
+  const group = Object.fromEntries(d.groups.map((g) => [g.group_id, g]));
+
   const items = asg.map((a) => {
-    const o = off[a.offering_id]; const c = course[o.course_id] || {};
-    return { ...a, periods: o.periods, end_period: a.start_period + o.periods - 1, group_id: o.group_id, teacher_id: o.teacher_id, course_id: o.course_id, course_name: c.course_name || o.course_id };
+    const o = off[a.offering_id] || {};
+    const c = course[o.course_id] || {};
+    const t = teacher[o.teacher_id] || {};
+    const r = room[a.room_id] || {};
+    const g = group[o.group_id] || {};
+    return {
+      ...a,
+      periods: o.periods,
+      end_period: a.start_period + o.periods - 1,
+      group_id: o.group_id,
+      group_name: g.group_name || o.group_id,
+      teacher_id: o.teacher_id,
+      teacher_name: t.teacher_name || o.teacher_id,
+      room_name: r.room_name || a.room_id,
+      course_id: o.course_id,
+      course_name: c.course_name || o.course_id
+    };
   });
-  res.json({ method, days: DAYS, items,
+  res.json({
+    method,
+    days: DAYS,
+    items,
     groups: d.groups.map((g) => ({ id: g.group_id, name: g.group_name || null })),
     teachers: d.teachers.map((t) => ({ id: t.teacher_id, name: t.teacher_name || null })),
-    rooms: d.rooms.map((r) => ({ id: r.room_id, name: r.room_name || null, type: r.room_type })) });
+    rooms: d.rooms.map((r) => ({ id: r.room_id, name: r.room_name || null, type: r.room_type }))
+  });
 }));
 
 router.get('/report/:sid', ah(async (req, res) => {

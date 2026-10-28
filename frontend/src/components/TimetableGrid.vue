@@ -37,9 +37,12 @@ const style = (id) => ({
 })
 const name = (s) => s.course_name || s.course_id
 function sub(s) {
-  if (props.mode === 'group') return [s.teacher_name || s.teacher_id, s.room_id]
-  if (props.mode === 'teacher') return [s.group_id, s.room_id]
-  return [s.group_id, s.teacher_name || s.teacher_id]
+  const teacher = s.teacher_name || s.teacher_id
+  const room = s.room_name || s.room_id
+  const group = s.group_name || s.group_id
+  if (props.mode === 'group') return [teacher, room]
+  if (props.mode === 'teacher') return [group, room]
+  return [group, teacher]
 }
 
 // การ์ดขยาย
@@ -124,9 +127,9 @@ const open = ref(null)
         </div>
         <dl class="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-2xl">
           <dt class="opacity-70">รหัสวิชา</dt><dd class="font-semibold">{{ open.course_id }}</dd>
-          <dt class="opacity-70">กลุ่มเรียน</dt><dd class="font-semibold">{{ open.group_id }}</dd>
-          <dt class="opacity-70">ครูผู้สอน</dt><dd class="font-semibold">{{ open.teacher_name || open.teacher_id }}</dd>
-          <dt class="opacity-70">ห้อง</dt><dd class="font-semibold">{{ open.room_id }}</dd>
+          <dt class="opacity-70">กลุ่มเรียน</dt><dd class="font-semibold">{{ open.group_name ? `${open.group_name} (${open.group_id})` : open.group_id }}</dd>
+          <dt class="opacity-70">ครูผู้สอน</dt><dd class="font-semibold">{{ open.teacher_name ? `${open.teacher_name} (${open.teacher_id})` : open.teacher_id }}</dd>
+          <dt class="opacity-70">ห้อง</dt><dd class="font-semibold">{{ open.room_name ? `${open.room_name} (${open.room_id})` : open.room_id }}</dd>
           <dt class="opacity-70">วัน</dt>
           <dd class="font-semibold">{{ DAYS.find((x) => x.k === open.day)?.l }}</dd>
           <dt class="opacity-70">เวลา</dt>

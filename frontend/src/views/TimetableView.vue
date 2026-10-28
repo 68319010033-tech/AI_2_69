@@ -54,6 +54,18 @@ watch(
 const sessions = computed(() => store.schedule.filter((s) => s[field.value] === selected.value))
 const totalPeriods = computed(() => sessions.value.reduce((a, s) => a + s.periods, 0))
 
+function optionLabel(id) {
+  if (!id) return ''
+  const l = store.lists?.[listKey.value]
+  if (l?.length) {
+    const item = l.find((x) => (typeof x === 'string' ? x : x.id) === id)
+    if (item && typeof item === 'object' && item.name) {
+      return `${item.name} (${id})`
+    }
+  }
+  return id
+}
+
 onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
 </script>
 
@@ -85,7 +97,7 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
                     </div>
                     <select v-model="selected"
                         class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none">
-                        <option v-for="o in options" :key="o" :value="o">{{ o }}</option>
+                        <option v-for="o in options" :key="o" :value="o">{{ optionLabel(o) }}</option>
                     </select>
                     <button
                         class="rounded-lg border border-primary-500 px-3 py-1.5 text-sm text-primary-700 hover:bg-primary-50"
@@ -102,11 +114,11 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
                      <div v-if="look === 'color'" class="mb-3 flex items-center justify-between">
                         <div class="text-2xl font-bold text-primary-700">ตารางเรียน</div>
                         <div class="rounded-full border-2 border-primary-500 px-5 py-1 font-semibold text-primary-700">
-                            {{ modeLabel }}: {{ selected }}
+                            {{ modeLabel }}: {{ optionLabel(selected) }}
                         </div>
                     </div>
             <TimetableGrid v-if="look === 'color'" :sessions="sessions" :mode="mode" :colors="colors" />
-          <TimetableFormal v-else :sessions="sessions" :mode="mode" :title="`${modeLabel} ${selected}`" />
+          <TimetableFormal v-else :sessions="sessions" :mode="mode" :title="`${modeLabel} ${optionLabel(selected)}`" />
                 </div>
             </div>
 

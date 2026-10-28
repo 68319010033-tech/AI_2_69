@@ -29,11 +29,13 @@ const cells = computed(() => {
 })
 
 const teacher = (s) => (s.teacher_name ? `ครู${s.teacher_name}` : s.teacher_id)
+const room = (s) => s.room_name || s.room_id
+const group = (s) => s.group_name || s.group_id
 function lines(s) {
   const course = s.course_name || s.course_id
-  if (props.mode === 'group') return [course, teacher(s), s.room_id]
-  if (props.mode === 'teacher') return [course, s.group_id, s.room_id]
-  return [course, s.group_id, teacher(s)]
+  if (props.mode === 'group') return [course, teacher(s), room(s)]
+  if (props.mode === 'teacher') return [course, group(s), room(s)]
+  return [course, group(s), teacher(s)]
 }
 </script>
 
