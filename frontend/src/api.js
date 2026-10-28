@@ -4,6 +4,10 @@ const MOCK = true
 const http = axios.create({ baseURL: '/api' })
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// issue.row = "เลขบรรทัดในไฟล์" (บรรทัด 1 = หัวตาราง) → index ของแถวข้อมูล = row - ROW_OFFSET
+// ถ้า backend นับแถวต่างจากนี้ (เช่น นับข้อมูลแถวแรก = 1) ให้แก้ค่านี้ที่เดียว
+export const ROW_OFFSET = 2
+
 const MOCK_SCHEDULE = [
     ['O001', 'MON', 1, 3, 'R01', 'T01', 'G1', 'C01'],
     ['O002', 'MON', 5, 2, 'R02', 'T02', 'G1', 'C02'],
@@ -25,6 +29,100 @@ const MOCK_SCHEDULE = [
 
 const MOCK_INFEASIBLE = false // เปลี่ยนเป็น true เพื่อทดสอบกรณีจัดตารางไม่ได้
 let mockJob = null
+
+
+// ---------- mock validate ที่ตรวจข้อมูลที่ผู้ใช้แก้จริง ----------
+// local = { 'offerings.csv': { headers: [...], rows: [[...], ...] }, ... }
+const norm = (v) => String(v ?? '').trim().toUpperCase()
+
+function colIdx(headers, ...names) {
+    const h = headers.map((x) => String(x).trim().toLowerCase())
+    for (const n of names) {
+        const i = h.indexOf(n)
+        if (i >= 0) return i
+    }
+    return -1
+}
+
+function idSet(local, file, ...names) {
+    const t = local[file]
+    if (!t) return null
+    const ci = Math.max(colIdx(t.headers, ...names), 0)
+    return new Set(t.rows.map((r) => norm(r[ci])))
+}
+
+function mockValidateLocal(local) {
+    const issues = []
+    const log = []
+
+    // 1) รหัสอ้างอิงใน offerings ต้องมีอยู่ในไฟล์หลัก
+    const fks = [
+        ['teacher_id', 'teachers.csv', ['teacher_id', 'id']],
+        ['group_id', 'groups.csv', ['group_id', 'id']],
+        ['course_id', 'courses.csv', ['course_id', 'id']],
+    ]
+    const off = local['offerings.csv']
+    for (const [col, refFile, refCols] of fks) {
+        const ids = idSet(local, refFile, ...refCols)
+        const ci = off ? colIdx(off.headers, col) : -1
+        if (!ids || ci < 0) continue
+        off.rows.forEach((r, i) => {
+            const v = norm(r[ci])
+            if (!v) {
+                issues.push({ severity: 'error', file: 'offerings.csv', row: i + ROW_OFFSET, column: col, message: 'ค่าว่าง (ห้ามว่าง)', suggestion: `ใส่รหัสให้ตรงกับ ${refFile}` })
+            } else if (!ids.has(v)) {
+                issues.push({ severity: 'error', file: 'offerings.csv', row: i + ROW_OFFSET, column: col, message: `ไม่พบรหัส ${v} ใน ${refFile}`, suggestion: `ตรวจรหัสให้ตรงกับ ${refFile}` })
+            }
+        })
+    }
+
+    // 2) ความจุห้องผิดปกติ
+    const rooms = local['rooms.csv']
+    if (rooms) {
+        const ci = colIdx(rooms.headers, 'capacity')
+        if (ci >= 0) rooms.rows.forEach((r, i) => {
+            const n = Number(String(r[ci]).trim())
+            if (!Number.isFinite(n) || n <= 0 || n > 200) {
+                issues.push({ severity: 'warning', file: 'rooms.csv', row: i + ROW_OFFSET, column: 'capacity', message: `ความจุผิดปกติ (${r[ci]})`, suggestion: 'ตรวจความจุห้อง' })
+            }
+        })
+    }
+
+    // 3) คาบอยู่นอกช่วง 1–8
+    for (const f of ['teacher_blocks.csv', 'room_blocks.csv']) {
+        const t = local[f]
+        if (!t) continue
+        const ci = colIdx(t.headers, 'period', 'start_period')
+        if (ci < 0) continue
+        t.rows.forEach((r, i) => {
+            const n = Number(String(r[ci]).trim())
+            if (!Number.isInteger(n) || n < 1 || n > 8) {
+                issues.push({ severity: 'warning', file: f, row: i + ROW_OFFSET, column: t.headers[ci], message: 'คาบอยู่นอกช่วง 1–8', suggestion: 'แก้ค่าเป็น 1–8' })
+            }
+        })
+    }
+
+    // 4) log จำลอง: ช่อง *_id ที่ยังมีช่องว่าง/ตัวพิมพ์เล็ก (backend จะล้างให้)
+    for (const [f, t] of Object.entries(local)) {
+        t.headers.forEach((h, ci) => {
+            if (!/_id$/i.test(h.trim())) return
+            t.rows.forEach((r, i) => {
+                const v = r[ci] ?? ''
+                if (v && v !== norm(v)) log.push({ file: f, row: i + ROW_OFFSET, column: h, before: v, after: norm(v), rule: 'trim + UPPERCASE' })
+            })
+        })
+    }
+
+    // 5) สถิติรวม
+    const pi = off ? colIdx(off.headers, 'periods') : -1
+    const periods = pi >= 0 ? off.rows.reduce((s, r) => s + (parseInt(String(r[pi]).trim(), 10) || 0), 0) : 0
+    return {
+        stats: { offerings: off ? off.rows.length : 0, periods, files: Object.keys(local).length },
+        issues,
+        log,
+        canGenerate: !issues.some((i) => i.severity === 'error'),
+    }
+}
 
 
 const DONE = ['done', 'completed', 'complete', 'success', 'finished']
@@ -84,9 +182,13 @@ export const api = {
         }
         return normSchedule((await http.get(`/schedule/${sessionId}`, { params: { method } })).data)
     },
-    async validate(sessionId) {
+
+    // local = ข้อมูลที่แก้ในเบราว์เซอร์ (ใช้เฉพาะโหมด mock; โหมดจริงรอ P2: PUT /api/files แล้วค่อย validate)
+    async validate(sessionId, local) {
         if (MOCK) {
-            await sleep(1000)
+            await sleep(600)
+            if (local && local['offerings.csv'] && local['teachers.csv']) return mockValidateLocal(local)
+            // ไม่มีไฟล์ในเบราว์เซอร์ → ใช้ข้อมูลจำลองตายตัว
             return {
                 stats: { offerings: 63, periods: 126, files: 10 },
                 issues: [

@@ -17,21 +17,30 @@ const steps = [
 const current = computed(() => route.meta.step || 1)
 const state = (n) =>
   n === current.value ? 'current' : n < current.value ? 'done' : n <= store.maxStep ? 'open' : 'locked'
+
+// ขั้นที่ล็อกยังเป็น RouterLink เหมือนเดิม (ไม่สลับเป็น <div> เพราะทำให้ Vue อัปเดตพังเมื่อสถานะเปลี่ยนระหว่างใช้งาน)
+// แต่กดไม่ได้: pointer-events-none + tabindex -1 + ดักคลิกก่อน router
+const blockIfLocked = (e, n) => {
+  if (state(n) === 'locked') e.preventDefault()
+}
 </script>
 
 <template>
   <nav class="flex gap-1 overflow-x-auto md:flex-col md:gap-0">
-    <component
-      :is="state(s.n) === 'locked' ? 'div' : 'RouterLink'"
+    <RouterLink
       v-for="(s, i) in steps"
       :key="s.n"
       :to="s.to"
+      :aria-disabled="state(s.n) === 'locked' ? 'true' : undefined"
+      :aria-current="state(s.n) === 'current' ? 'step' : undefined"
+      :tabindex="state(s.n) === 'locked' ? -1 : undefined"
       class="relative flex shrink-0 items-start gap-3 rounded-lg p-3 md:pb-6"
       :class="{
         'bg-primary-50': state(s.n) === 'current',
         'hover:bg-slate-50': state(s.n) === 'done' || state(s.n) === 'open',
-        'cursor-not-allowed opacity-50': state(s.n) === 'locked',
+        'pointer-events-none cursor-not-allowed opacity-50': state(s.n) === 'locked',
       }"
+      @click.capture="blockIfLocked($event, s.n)"
     >
       <!-- เส้นเชื่อม -->
       <span
@@ -56,6 +65,6 @@ const state = (n) =>
         </span>
         <span class="block text-sm text-slate-500">{{ s.desc }}</span>
       </span>
-    </component>
+    </RouterLink>
   </nav>
 </template>
