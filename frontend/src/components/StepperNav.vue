@@ -1,0 +1,61 @@
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useSessionStore } from '@/stores/session'
+
+const route = useRoute()
+const store = useSessionStore()
+
+const steps = [
+  { n: 1, to: '/upload', title: 'อัปโหลดข้อมูล', desc: 'นำเข้าไฟล์ CSV 10 ไฟล์' },
+  { n: 2, to: '/validate', title: 'ตรวจสอบข้อมูล', desc: 'ดูปัญหาและการแก้ไข' },
+  { n: 3, to: '/generate', title: 'จัดตารางสอน', desc: 'ให้ AI คำนวณตาราง' },
+  { n: 4, to: '/timetable', title: 'ดูตารางสอน', desc: 'รายกลุ่ม / ครู / ห้อง' },
+  { n: 5, to: '/export', title: 'ส่งออกผลลัพธ์', desc: 'solution.csv และรายงาน' },
+]
+
+const current = computed(() => route.meta.step || 1)
+const state = (n) =>
+  n === current.value ? 'current' : n < current.value ? 'done' : n <= store.maxStep ? 'open' : 'locked'
+</script>
+
+<template>
+  <nav class="flex gap-1 overflow-x-auto md:flex-col md:gap-0">
+    <component
+      :is="state(s.n) === 'locked' ? 'div' : 'RouterLink'"
+      v-for="(s, i) in steps"
+      :key="s.n"
+      :to="s.to"
+      class="relative flex shrink-0 items-start gap-3 rounded-lg p-3 md:pb-6"
+      :class="{
+        'bg-primary-50': state(s.n) === 'current',
+        'hover:bg-slate-50': state(s.n) === 'done' || state(s.n) === 'open',
+        'cursor-not-allowed opacity-50': state(s.n) === 'locked',
+      }"
+    >
+      <!-- เส้นเชื่อม -->
+      <span
+        v-if="i < steps.length - 1"
+        class="absolute left-[1.65rem] top-11 hidden h-[calc(100%-1.5rem)] w-0.5 md:block"
+        :class="s.n < current ? 'bg-primary-500' : 'bg-slate-200'"
+      />
+      <!-- วงกลมเลขขั้น -->
+      <span
+        class="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold"
+        :class="{
+          'border-primary-600 bg-primary-600 text-white': state(s.n) === 'current' || state(s.n) === 'done',
+          'border-primary-500 bg-white text-primary-600': state(s.n) === 'open',
+          'border-slate-300 bg-white text-slate-400': state(s.n) === 'locked',
+        }"
+      >
+        {{ state(s.n) === 'done' ? '✓' : s.n }}
+      </span>
+      <span class="hidden md:block">
+        <span class="block font-semibold" :class="state(s.n) === 'current' ? 'text-primary-700' : 'text-slate-800'">
+          {{ s.title }}
+        </span>
+        <span class="block text-sm text-slate-500">{{ s.desc }}</span>
+      </span>
+    </component>
+  </nav>
+</template>
