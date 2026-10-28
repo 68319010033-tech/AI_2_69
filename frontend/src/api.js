@@ -4,8 +4,33 @@ const MOCK = true
 const http = axios.create({ baseURL: '/api' })
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-export const api = {
+const MOCK_SCHEDULE = [
+    ['O001', 'MON', 1, 3, 'R01', 'T01', 'G1', 'C01'],
+    ['O002', 'MON', 5, 2, 'R02', 'T02', 'G1', 'C02'],
+    ['O003', 'TUE', 1, 2, 'R01', 'T03', 'G1', 'C03'],
+    ['O004', 'TUE', 3, 2, 'R03', 'T01', 'G1', 'C04'],
+    ['O005', 'WED', 2, 3, 'R02', 'T02', 'G1', 'C05'],
+    ['O006', 'MON', 1, 2, 'R02', 'T03', 'G2', 'C03'],
+    ['O007', 'MON', 3, 2, 'R03', 'T02', 'G2', 'C02'],
+    ['O008', 'TUE', 5, 3, 'R03', 'T01', 'G2', 'C01'],
+    ['O009', 'THU', 1, 3, 'R01', 'T04', 'G2', 'C06'],
+    ['O010', 'WED', 5, 2, 'R02', 'T04', 'G3', 'C05'],
+    ['O011', 'FRI', 1, 2, 'R01', 'T03', 'G3', 'C03'],
+    ['O012', 'FRI', 3, 2, 'R02', 'T01', 'G3', 'C04'],
+    ['O013', 'THU', 5, 3, 'R03', 'T02', 'G3', 'C01'],
+    ['O014', 'TUE', 1, 2, 'R02', 'T04', 'G3', 'C06'],
+].map(([offering_id, day, start_period, periods, room_id, teacher_id, group_id, course_id]) => ({
+    offering_id, day, start_period, periods, room_id, teacher_id, group_id, course_id,
+}))
 
+export const api = {
+    async schedule(sessionId) {
+        if (MOCK) {
+            await sleep(500)
+            return MOCK_SCHEDULE
+        }
+        return (await http.get(`/schedule/${sessionId}`)).data
+    },
     async validate(sessionId) {
         if (MOCK) {
             await sleep(1000)

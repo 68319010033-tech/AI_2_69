@@ -15,6 +15,8 @@ export const useSessionStore = defineStore('session', () => {
     const error = ref('')
     const validated = ref(false)   // ตั้งเป็น true เมื่อ validate ผ่านไม่มี blocking error
     const generated = ref(false)   // ตั้งเป็น true เมื่อ generate สำเร็จ
+    const schedule = ref([])
+    const scheduleLoading = ref(false)
     const issues = ref([])
     const log = ref([])
     const stats = ref(null)
@@ -106,9 +108,18 @@ export const useSessionStore = defineStore('session', () => {
         }
     }
 
+  async function loadSchedule() {
+    scheduleLoading.value = true
+    try {
+      schedule.value = await api.schedule(sessionId.value)
+    } finally {
+      scheduleLoading.value = false
+    }
+  }
+
 
     return {
         sessionId, files, uploading, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload
-        , issues, log, stats, validating, validateError, errorCount, warnCount, validate
+        , issues, log, stats, validating, validateError, errorCount, warnCount, validate , schedule, scheduleLoading, loadSchedule
     }
 })
