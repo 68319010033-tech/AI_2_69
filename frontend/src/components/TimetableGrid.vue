@@ -127,9 +127,9 @@ const open = ref(null)
         </div>
         <dl class="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-2xl">
           <dt class="opacity-70">รหัสวิชา</dt><dd class="font-semibold">{{ open.course_id }}</dd>
-          <dt class="opacity-70">กลุ่มเรียน</dt><dd class="font-semibold">{{ open.group_name ? `${open.group_name} (${open.group_id})` : open.group_id }}</dd>
-          <dt class="opacity-70">ครูผู้สอน</dt><dd class="font-semibold">{{ open.teacher_name ? `${open.teacher_name} (${open.teacher_id})` : open.teacher_id }}</dd>
-          <dt class="opacity-70">ห้อง</dt><dd class="font-semibold">{{ open.room_name ? `${open.room_name} (${open.room_id})` : open.room_id }}</dd>
+          <dt class="opacity-70">กลุ่มเรียน</dt><dd class="font-semibold">{{ open.group_name || open.group_id }}</dd>
+          <dt class="opacity-70">ครูผู้สอน</dt><dd class="font-semibold">{{ open.teacher_name || open.teacher_id }}</dd>
+          <dt class="opacity-70">ห้อง</dt><dd class="font-semibold">{{ open.room_name || open.room_id }}</dd>
           <dt class="opacity-70">วัน</dt>
           <dd class="font-semibold">{{ DAYS.find((x) => x.k === open.day)?.l }}</dd>
           <dt class="opacity-70">เวลา</dt>

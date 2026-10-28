@@ -60,7 +60,7 @@ function optionLabel(id) {
   if (l?.length) {
     const item = l.find((x) => (typeof x === 'string' ? x : x.id) === id)
     if (item && typeof item === 'object' && item.name) {
-      return `${item.name} (${id})`
+      return item.name
     }
   }
   return id
