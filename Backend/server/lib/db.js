@@ -10,9 +10,10 @@ function init() {
 
   if (url && (b64 || raw)) {
     try {
-      const admin = require('firebase-admin');
-      let credJson = '';
+      const { initializeApp, cert, getApps } = require('firebase-admin/app');
+      const { getDatabase } = require('firebase-admin/database');
 
+      let credJson = '';
       if (b64) {
         if (b64.startsWith('{')) {
           // User accidentally pasted raw JSON into FIREBASE_SERVICE_ACCOUNT_B64 directly
@@ -44,13 +45,12 @@ function init() {
       }
 
       const cleanUrl = url.replace(/\/+$/, '');
-      if (!admin.apps.length) {
-        admin.initializeApp({
-          credential: admin.credential.cert(cred),
-          databaseURL: cleanUrl
-        });
-      }
-      rtdb = admin.database();
+      const app = getApps().length > 0 ? getApps()[0] : initializeApp({
+        credential: cert(cred),
+        databaseURL: cleanUrl
+      });
+
+      rtdb = getDatabase(app);
       mode = 'firebase';
       console.log(`[db] Firebase Realtime Database connected (${cred.project_id || 'ok'})`);
     } catch (e) {
