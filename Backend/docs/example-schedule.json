@@ -1,0 +1,937 @@
+﻿{
+    "method":  "cpsat",
+    "days":  [
+                 "MON",
+                 "TUE",
+                 "WED",
+                 "THU",
+                 "FRI"
+             ],
+    "items":  [
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O001",
+                      "room_id":  "R01",
+                      "start_period":  1,
+                      "periods":  3,
+                      "end_period":  3,
+                      "group_id":  "G01",
+                      "teacher_id":  "T01",
+                      "course_id":  "C01",
+                      "course_name":  "Course 1"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O002",
+                      "room_id":  "R06",
+                      "start_period":  7,
+                      "periods":  2,
+                      "end_period":  8,
+                      "group_id":  "G01",
+                      "teacher_id":  "T02",
+                      "course_id":  "C03",
+                      "course_name":  "Course 3"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O003",
+                      "room_id":  "R06",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G01",
+                      "teacher_id":  "T03",
+                      "course_id":  "C05",
+                      "course_name":  "Course 5"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O004",
+                      "room_id":  "R09",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G01",
+                      "teacher_id":  "T04",
+                      "course_id":  "C07",
+                      "course_name":  "Course 7"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O005",
+                      "room_id":  "R08",
+                      "start_period":  7,
+                      "periods":  2,
+                      "end_period":  8,
+                      "group_id":  "G01",
+                      "teacher_id":  "T05",
+                      "course_id":  "C09",
+                      "course_name":  "Course 9"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O006",
+                      "room_id":  "R11",
+                      "start_period":  6,
+                      "periods":  2,
+                      "end_period":  7,
+                      "group_id":  "G01",
+                      "teacher_id":  "T06",
+                      "course_id":  "C11",
+                      "course_name":  "Course 11"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O007",
+                      "room_id":  "R06",
+                      "start_period":  4,
+                      "periods":  1,
+                      "end_period":  4,
+                      "group_id":  "G01",
+                      "teacher_id":  "T07",
+                      "course_id":  "C02",
+                      "course_name":  "Course 2"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O008",
+                      "room_id":  "R04",
+                      "start_period":  6,
+                      "periods":  3,
+                      "end_period":  8,
+                      "group_id":  "G02",
+                      "teacher_id":  "T08",
+                      "course_id":  "C02",
+                      "course_name":  "Course 2"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O009",
+                      "room_id":  "R03",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G02",
+                      "teacher_id":  "T09",
+                      "course_id":  "C04",
+                      "course_name":  "Course 4"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O010",
+                      "room_id":  "R02",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G02",
+                      "teacher_id":  "T10",
+                      "course_id":  "C06",
+                      "course_name":  "Course 6"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O011",
+                      "room_id":  "R08",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G02",
+                      "teacher_id":  "T11",
+                      "course_id":  "C08",
+                      "course_name":  "Course 8"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O012",
+                      "room_id":  "R10",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G02",
+                      "teacher_id":  "T12",
+                      "course_id":  "C10",
+                      "course_name":  "Course 10"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O013",
+                      "room_id":  "R02",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G02",
+                      "teacher_id":  "T13",
+                      "course_id":  "C01",
+                      "course_name":  "Course 1"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O014",
+                      "room_id":  "R01",
+                      "start_period":  3,
+                      "periods":  1,
+                      "end_period":  3,
+                      "group_id":  "G02",
+                      "teacher_id":  "T14",
+                      "course_id":  "C03",
+                      "course_name":  "Course 3"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O015",
+                      "room_id":  "R02",
+                      "start_period":  1,
+                      "periods":  3,
+                      "end_period":  3,
+                      "group_id":  "G03",
+                      "teacher_id":  "T15",
+                      "course_id":  "C03",
+                      "course_name":  "Course 3"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O016",
+                      "room_id":  "R04",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G03",
+                      "teacher_id":  "T16",
+                      "course_id":  "C05",
+                      "course_name":  "Course 5"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O017",
+                      "room_id":  "R09",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G03",
+                      "teacher_id":  "T17",
+                      "course_id":  "C07",
+                      "course_name":  "Course 7"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O018",
+                      "room_id":  "R09",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G03",
+                      "teacher_id":  "T18",
+                      "course_id":  "C09",
+                      "course_name":  "Course 9"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O019",
+                      "room_id":  "R11",
+                      "start_period":  7,
+                      "periods":  2,
+                      "end_period":  8,
+                      "group_id":  "G03",
+                      "teacher_id":  "T01",
+                      "course_id":  "C11",
+                      "course_name":  "Course 11"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O020",
+                      "room_id":  "R06",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G03",
+                      "teacher_id":  "T02",
+                      "course_id":  "C02",
+                      "course_name":  "Course 2"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O021",
+                      "room_id":  "R01",
+                      "start_period":  1,
+                      "periods":  1,
+                      "end_period":  1,
+                      "group_id":  "G03",
+                      "teacher_id":  "T03",
+                      "course_id":  "C04",
+                      "course_name":  "Course 4"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O022",
+                      "room_id":  "R06",
+                      "start_period":  2,
+                      "periods":  3,
+                      "end_period":  4,
+                      "group_id":  "G04",
+                      "teacher_id":  "T04",
+                      "course_id":  "C04",
+                      "course_name":  "Course 4"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O023",
+                      "room_id":  "R06",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G04",
+                      "teacher_id":  "T05",
+                      "course_id":  "C06",
+                      "course_name":  "Course 6"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O024",
+                      "room_id":  "R09",
+                      "start_period":  6,
+                      "periods":  2,
+                      "end_period":  7,
+                      "group_id":  "G04",
+                      "teacher_id":  "T06",
+                      "course_id":  "C08",
+                      "course_name":  "Course 8"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O025",
+                      "room_id":  "R10",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G04",
+                      "teacher_id":  "T07",
+                      "course_id":  "C10",
+                      "course_name":  "Course 10"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O026",
+                      "room_id":  "R06",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G04",
+                      "teacher_id":  "T08",
+                      "course_id":  "C01",
+                      "course_name":  "Course 1"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O027",
+                      "room_id":  "R04",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G04",
+                      "teacher_id":  "T09",
+                      "course_id":  "C03",
+                      "course_name":  "Course 3"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O028",
+                      "room_id":  "R03",
+                      "start_period":  5,
+                      "periods":  1,
+                      "end_period":  5,
+                      "group_id":  "G04",
+                      "teacher_id":  "T10",
+                      "course_id":  "C05",
+                      "course_name":  "Course 5"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O029",
+                      "room_id":  "R04",
+                      "start_period":  2,
+                      "periods":  3,
+                      "end_period":  4,
+                      "group_id":  "G05",
+                      "teacher_id":  "T11",
+                      "course_id":  "C05",
+                      "course_name":  "Course 5"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O030",
+                      "room_id":  "R09",
+                      "start_period":  7,
+                      "periods":  2,
+                      "end_period":  8,
+                      "group_id":  "G05",
+                      "teacher_id":  "T12",
+                      "course_id":  "C07",
+                      "course_name":  "Course 7"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O031",
+                      "room_id":  "R09",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G05",
+                      "teacher_id":  "T13",
+                      "course_id":  "C09",
+                      "course_name":  "Course 9"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O032",
+                      "room_id":  "R11",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G05",
+                      "teacher_id":  "T14",
+                      "course_id":  "C11",
+                      "course_name":  "Course 11"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O033",
+                      "room_id":  "R06",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G05",
+                      "teacher_id":  "T15",
+                      "course_id":  "C02",
+                      "course_name":  "Course 2"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O034",
+                      "room_id":  "R01",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G05",
+                      "teacher_id":  "T16",
+                      "course_id":  "C04",
+                      "course_name":  "Course 4"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O035",
+                      "room_id":  "R02",
+                      "start_period":  5,
+                      "periods":  1,
+                      "end_period":  5,
+                      "group_id":  "G05",
+                      "teacher_id":  "T17",
+                      "course_id":  "C06",
+                      "course_name":  "Course 6"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O036",
+                      "room_id":  "R01",
+                      "start_period":  2,
+                      "periods":  3,
+                      "end_period":  4,
+                      "group_id":  "G06",
+                      "teacher_id":  "T18",
+                      "course_id":  "C06",
+                      "course_name":  "Course 6"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O037",
+                      "room_id":  "R09",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G06",
+                      "teacher_id":  "T01",
+                      "course_id":  "C08",
+                      "course_name":  "Course 8"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O038",
+                      "room_id":  "R10",
+                      "start_period":  6,
+                      "periods":  2,
+                      "end_period":  7,
+                      "group_id":  "G06",
+                      "teacher_id":  "T02",
+                      "course_id":  "C10",
+                      "course_name":  "Course 10"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O039",
+                      "room_id":  "R01",
+                      "start_period":  7,
+                      "periods":  2,
+                      "end_period":  8,
+                      "group_id":  "G06",
+                      "teacher_id":  "T03",
+                      "course_id":  "C01",
+                      "course_name":  "Course 1"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O040",
+                      "room_id":  "R05",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G06",
+                      "teacher_id":  "T04",
+                      "course_id":  "C03",
+                      "course_name":  "Course 3"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O041",
+                      "room_id":  "R02",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G06",
+                      "teacher_id":  "T05",
+                      "course_id":  "C05",
+                      "course_name":  "Course 5"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O042",
+                      "room_id":  "R09",
+                      "start_period":  8,
+                      "periods":  1,
+                      "end_period":  8,
+                      "group_id":  "G06",
+                      "teacher_id":  "T06",
+                      "course_id":  "C07",
+                      "course_name":  "Course 7"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O043",
+                      "room_id":  "R07",
+                      "start_period":  5,
+                      "periods":  3,
+                      "end_period":  7,
+                      "group_id":  "G07",
+                      "teacher_id":  "T07",
+                      "course_id":  "C07",
+                      "course_name":  "Course 7"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O044",
+                      "room_id":  "R07",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G07",
+                      "teacher_id":  "T08",
+                      "course_id":  "C09",
+                      "course_name":  "Course 9"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O045",
+                      "room_id":  "R11",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G07",
+                      "teacher_id":  "T09",
+                      "course_id":  "C11",
+                      "course_name":  "Course 11"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O046",
+                      "room_id":  "R03",
+                      "start_period":  5,
+                      "periods":  2,
+                      "end_period":  6,
+                      "group_id":  "G07",
+                      "teacher_id":  "T10",
+                      "course_id":  "C02",
+                      "course_name":  "Course 2"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O047",
+                      "room_id":  "R05",
+                      "start_period":  2,
+                      "periods":  2,
+                      "end_period":  3,
+                      "group_id":  "G07",
+                      "teacher_id":  "T11",
+                      "course_id":  "C04",
+                      "course_name":  "Course 4"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O048",
+                      "room_id":  "R01",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G07",
+                      "teacher_id":  "T12",
+                      "course_id":  "C06",
+                      "course_name":  "Course 6"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O049",
+                      "room_id":  "R09",
+                      "start_period":  1,
+                      "periods":  1,
+                      "end_period":  1,
+                      "group_id":  "G07",
+                      "teacher_id":  "T13",
+                      "course_id":  "C08",
+                      "course_name":  "Course 8"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O050",
+                      "room_id":  "R08",
+                      "start_period":  6,
+                      "periods":  3,
+                      "end_period":  8,
+                      "group_id":  "G08",
+                      "teacher_id":  "T14",
+                      "course_id":  "C08",
+                      "course_name":  "Course 8"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O051",
+                      "room_id":  "R10",
+                      "start_period":  7,
+                      "periods":  2,
+                      "end_period":  8,
+                      "group_id":  "G08",
+                      "teacher_id":  "T15",
+                      "course_id":  "C10",
+                      "course_name":  "Course 10"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O052",
+                      "room_id":  "R06",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G08",
+                      "teacher_id":  "T16",
+                      "course_id":  "C01",
+                      "course_name":  "Course 1"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O053",
+                      "room_id":  "R03",
+                      "start_period":  2,
+                      "periods":  2,
+                      "end_period":  3,
+                      "group_id":  "G08",
+                      "teacher_id":  "T17",
+                      "course_id":  "C03",
+                      "course_name":  "Course 3"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O054",
+                      "room_id":  "R05",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G08",
+                      "teacher_id":  "T18",
+                      "course_id":  "C05",
+                      "course_name":  "Course 5"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O055",
+                      "room_id":  "R08",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G08",
+                      "teacher_id":  "T01",
+                      "course_id":  "C07",
+                      "course_name":  "Course 7"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O056",
+                      "room_id":  "R07",
+                      "start_period":  8,
+                      "periods":  1,
+                      "end_period":  8,
+                      "group_id":  "G08",
+                      "teacher_id":  "T02",
+                      "course_id":  "C09",
+                      "course_name":  "Course 9"
+                  },
+                  {
+                      "day":  "THU",
+                      "offering_id":  "O057",
+                      "room_id":  "R09",
+                      "start_period":  2,
+                      "periods":  3,
+                      "end_period":  4,
+                      "group_id":  "G09",
+                      "teacher_id":  "T03",
+                      "course_id":  "C09",
+                      "course_name":  "Course 9"
+                  },
+                  {
+                      "day":  "FRI",
+                      "offering_id":  "O058",
+                      "room_id":  "R11",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G09",
+                      "teacher_id":  "T04",
+                      "course_id":  "C11",
+                      "course_name":  "Course 11"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O059",
+                      "room_id":  "R05",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G09",
+                      "teacher_id":  "T05",
+                      "course_id":  "C02",
+                      "course_name":  "Course 2"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O060",
+                      "room_id":  "R06",
+                      "start_period":  7,
+                      "periods":  2,
+                      "end_period":  8,
+                      "group_id":  "G09",
+                      "teacher_id":  "T06",
+                      "course_id":  "C04",
+                      "course_name":  "Course 4"
+                  },
+                  {
+                      "day":  "WED",
+                      "offering_id":  "O061",
+                      "room_id":  "R04",
+                      "start_period":  1,
+                      "periods":  2,
+                      "end_period":  2,
+                      "group_id":  "G09",
+                      "teacher_id":  "T07",
+                      "course_id":  "C06",
+                      "course_name":  "Course 6"
+                  },
+                  {
+                      "day":  "TUE",
+                      "offering_id":  "O062",
+                      "room_id":  "R07",
+                      "start_period":  3,
+                      "periods":  2,
+                      "end_period":  4,
+                      "group_id":  "G09",
+                      "teacher_id":  "T08",
+                      "course_id":  "C08",
+                      "course_name":  "Course 8"
+                  },
+                  {
+                      "day":  "MON",
+                      "offering_id":  "O063",
+                      "room_id":  "R10",
+                      "start_period":  4,
+                      "periods":  1,
+                      "end_period":  4,
+                      "group_id":  "G09",
+                      "teacher_id":  "T09",
+                      "course_id":  "C10",
+                      "course_name":  "Course 10"
+                  }
+              ],
+    "groups":  [
+                   {
+                       "id":  "G01",
+                       "name":  "Group 1"
+                   },
+                   {
+                       "id":  "G02",
+                       "name":  "Group 2"
+                   },
+                   {
+                       "id":  "G03",
+                       "name":  "Group 3"
+                   },
+                   {
+                       "id":  "G04",
+                       "name":  "Group 4"
+                   },
+                   {
+                       "id":  "G05",
+                       "name":  "Group 5"
+                   },
+                   {
+                       "id":  "G06",
+                       "name":  "Group 6"
+                   },
+                   {
+                       "id":  "G07",
+                       "name":  "Group 7"
+                   },
+                   {
+                       "id":  "G08",
+                       "name":  "Group 8"
+                   },
+                   {
+                       "id":  "G09",
+                       "name":  "Group 9"
+                   }
+               ],
+    "teachers":  [
+                     {
+                         "id":  "T01",
+                         "name":  "Teacher 1"
+                     },
+                     {
+                         "id":  "T02",
+                         "name":  "Teacher 2"
+                     },
+                     {
+                         "id":  "T03",
+                         "name":  "Teacher 3"
+                     },
+                     {
+                         "id":  "T04",
+                         "name":  "Teacher 4"
+                     },
+                     {
+                         "id":  "T05",
+                         "name":  "Teacher 5"
+                     },
+                     {
+                         "id":  "T06",
+                         "name":  "Teacher 6"
+                     },
+                     {
+                         "id":  "T07",
+                         "name":  "Teacher 7"
+                     },
+                     {
+                         "id":  "T08",
+                         "name":  "Teacher 8"
+                     },
+                     {
+                         "id":  "T09",
+                         "name":  "Teacher 9"
+                     },
+                     {
+                         "id":  "T10",
+                         "name":  "Teacher 10"
+                     },
+                     {
+                         "id":  "T11",
+                         "name":  "Teacher 11"
+                     },
+                     {
+                         "id":  "T12",
+                         "name":  "Teacher 12"
+                     },
+                     {
+                         "id":  "T13",
+                         "name":  "Teacher 13"
+                     },
+                     {
+                         "id":  "T14",
+                         "name":  "Teacher 14"
+                     },
+                     {
+                         "id":  "T15",
+                         "name":  "Teacher 15"
+                     },
+                     {
+                         "id":  "T16",
+                         "name":  "Teacher 16"
+                     },
+                     {
+                         "id":  "T17",
+                         "name":  "Teacher 17"
+                     },
+                     {
+                         "id":  "T18",
+                         "name":  "Teacher 18"
+                     }
+                 ],
+    "rooms":  [
+                  {
+                      "id":  "R01",
+                      "name":  "Room 1",
+                      "type":  "GENERAL"
+                  },
+                  {
+                      "id":  "R02",
+                      "name":  "Room 2",
+                      "type":  "GENERAL"
+                  },
+                  {
+                      "id":  "R03",
+                      "name":  "Room 3",
+                      "type":  "GENERAL"
+                  },
+                  {
+                      "id":  "R04",
+                      "name":  "Room 4",
+                      "type":  "GENERAL"
+                  },
+                  {
+                      "id":  "R05",
+                      "name":  "Room 5",
+                      "type":  "GENERAL"
+                  },
+                  {
+                      "id":  "R06",
+                      "name":  "Room 6",
+                      "type":  "GENERAL"
+                  },
+                  {
+                      "id":  "R07",
+                      "name":  "Room 7",
+                      "type":  "COMPUTER"
+                  },
+                  {
+                      "id":  "R08",
+                      "name":  "Room 8",
+                      "type":  "COMPUTER"
+                  },
+                  {
+                      "id":  "R09",
+                      "name":  "Room 9",
+                      "type":  "COMPUTER"
+                  },
+                  {
+                      "id":  "R10",
+                      "name":  "Room 10",
+                      "type":  "NETWORK"
+                  },
+                  {
+                      "id":  "R11",
+                      "name":  "Room 11",
+                      "type":  "MEDIA"
+                  }
+              ]
+}

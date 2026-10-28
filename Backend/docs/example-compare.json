@@ -1,0 +1,18 @@
+﻿{
+    "value":  [
+                  {
+                      "method":  "cpsat",
+                      "valid":  true,
+                      "violations":  0,
+                      "scheduled":  63,
+                      "total":  63,
+                      "group_balance_dev":  28.8,
+                      "group_max_per_day":  4,
+                      "teacher_gaps":  0,
+                      "objective":  144,
+                      "solverStatus":  "FEASIBLE",
+                      "seconds":  20.14
+                  }
+              ],
+    "Count":  1
+}
