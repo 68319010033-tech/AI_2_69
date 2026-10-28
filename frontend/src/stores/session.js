@@ -176,7 +176,8 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     return {
-        sessionId, files, uploading, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload
-        , issues, log, stats, validating, validateError, errorCount, warnCount, validate, schedule, scheduleLoading, loadSchedule, job, generating, generateError, startedAt, startGenerate, cancelGenerate
+        sessionId, files, uploading, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload,
+        issues, log, stats, validating, validateError, errorCount, warnCount, validate, schedule, scheduleLoading, loadSchedule,
+        lists, method, job, generating, generateError, startedAt, startGenerate, cancelGenerate
     }
 })

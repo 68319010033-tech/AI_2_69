@@ -42,9 +42,9 @@ const selected = ref('')
 const field = computed(() => tabs.find((t) => t.k === mode.value).f)
 const listKey = computed(() => ({ group: 'groups', teacher: 'teachers', room: 'rooms' })[mode.value])
 const options = computed(() => {
-  const l = store.lists[listKey.value]
+  const l = store.lists?.[listKey.value]
   if (l?.length) return l.map((x) => (typeof x === 'string' ? x : x.id))
-  return [...new Set(store.schedule.map((s) => s[field.value]))].sort()
+  return [...new Set((store.schedule || []).map((s) => s[field.value]))].sort()
 })
 watch(
     options,
