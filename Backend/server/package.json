@@ -1,0 +1,31 @@
+{
+  "name": "phupha-timetable-server",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node --test test/*.test.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "csv-parse": "^7.0.3",
+    "dotenv": "^18.0.9",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.1",
+    "firebase-admin": "^14.5.0",
+    "google-auth-library": "^11.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.2.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.1"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}
