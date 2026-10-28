@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: phupha-timetable
+    runtime: docker
+    dockerfilePath: Backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: PYTHON_BIN
+        value: /opt/venv/bin/python
+      - key: TRUST_PROXY_HOPS
+        value: 1
+      - key: APP_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FIREBASE_DATABASE_URL
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_B64
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 465
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false

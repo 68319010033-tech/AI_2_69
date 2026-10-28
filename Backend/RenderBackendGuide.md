@@ -1,252 +1,189 @@
-# How to Upload (Deploy) the Backend to Render
+# คู่มือการติดตั้งและ Deploy ขึ้น Render (Render Deployment Guide)
 
-> Legacy deployment reference. For this authentication-enabled branch, follow
-> [AUTH_SETUP.md](../AUTH_SETUP.md): build Docker from the repository root using
-> `Backend/Dockerfile`, configure JWT/HTTPS/Firebase/Google/SMTP, and use cookie-based
-> login. The old admin-password, bearer-token and AUTH_DISABLED instructions below
-> no longer apply.
+**Project:** Phu Pha Timetable (AI_2_69) · Vue 3 + Express + Python OR-Tools (CP-SAT) + Firebase Realtime Database
 
-**Project:** Phu Pha Timetable · Express + Python CP-SAT + Firebase
-
-> Render's website may look a little different from this guide. Follow the same idea if a button has a different name.
+คู่มือฉบับนี้อัปเดตสำหรับเวอร์ชันล่าสุด ซึ่งรวม Frontend (Vue 3/Vite) และ Backend (Express + Python OR-Tools) เข้าด้วยกันใน Single Docker Container ที่ให้บริการทั้ง Web UI และ API แบบ Same-Origin
 
 ---
 
-## Part 0 – Check before you start
+## 1. ภาพรวมสถาปัตยกรรม (Architecture Overview)
 
-- [ ] The server runs on your computer with `(db: firebase)`
-- [ ] You have a GitHub account and a Render account (sign in with GitHub)
-- [ ] You have from Firebase:
-  - Database URL (`https://xxxx-default-rtdb....firebasedatabase.app`)
-  - `serviceAccount.json` (the key file)
-- [ ] You will **NOT** upload `.env` or `serviceAccount.json` to GitHub
+ระบบใช้ **Multi-stage Dockerfile** (`Backend/Dockerfile`):
+- **Stage 1 (client-build):** Build Vue 3 Frontend ด้วย Vite ให้กลายเป็น Static assets ใน `frontend/dist`
+- **Stage 2 (runtime):** รัน Node.js 24 + Python 3 (Virtual Environment พร้อมติดตั้ง Google OR-Tools)
+- **Unified Service:** Express ให้บริการทั้ง Web UI (`/`) และ REST API (`/api/*`) ผ่านพอร์ตเดียวกัน (Port 3000) ทำให้ไม่มีปัญหา CORS และใช้ Cookie-based JWT Session ที่ปลอดภัย
 
 ---
 
-## Part 1 – Fix one thing in the project (important)
+## 2. สิ่งที่ต้องเตรียมก่อนเริ่ม (Prerequisites)
 
-The Dockerfile copies a folder called `client`. Your Backend project does not have it yet, so the build would **fail**.
+1. **บัญชี GitHub** พร้อม Repository โค้ดโปรเจกต์นี้
+2. **บัญชี Render** (สมัครผ่าน https://render.com โดย Sign in with GitHub)
+3. **Firebase Realtime Database:**
+   - Database URL (เช่น `https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app`)
+   - ไฟล์ Service Account JSON (`serviceAccount.json`) จาก Firebase Console:
+     *เข้า Project Settings → Service accounts → กดปุ่ม "Generate new private key"*
+4. **ความปลอดภัย:** ห้าม Commit ไฟล์ `.env` หรือ `serviceAccount.json` ขึ้น GitHub โดยเด็ดขาด (โปรเจกต์มี `.gitignore` และ `.dockerignore` บล็อกไว้แล้ว)
 
-Fix: create a placeholder file.
+---
+
+## 3. เตรียมค่า Environment Variables สำคัญ
+
+ก่อนเริ่มสร้าง Web Service บน Render ให้เตรียมค่า 3 ตัวนี้ไว้ใน Notepad:
+
+### 3.1 แปลง Firebase Service Account เป็น Base64 (1 บรรทัด)
+เปิด PowerShell บนเครื่องของคุณ แล้วรันคำสั่ง:
 
 ```powershell
-cd C:\Ai\AI_2_69\Backend
-New-Item -ItemType Directory -Force client | Out-Null
-New-Item client\.gitkeep -ItemType File -Force | Out-Null
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\serviceAccount.json")) | Set-Clipboard
 ```
+*(เปลี่ยน `C:\path\to\serviceAccount.json` ให้เป็นที่อยู่ไฟล์จริงของคุณ)*
+เมื่อรันแล้ว ข้อความ Base64 จะถูกคัดลอกลง Clipboard อัตโนมัติ (ลองกด Ctrl+V ใน Notepad ดู จะได้ข้อความยาว 1 บรรทัดที่ขึ้นต้นด้วย `ew...`)
 
-Later, when your friend's Vue project is ready, put it in the `client` folder. It must have `package.json` **and** `package-lock.json`. The Dockerfile will build it automatically.
-
----
-
-## Part 2 – Push the code to GitHub
-
-1. Open the terminal in the project folder.
-
-2. Check what will be uploaded:
-
-   ```powershell
-   git status
-   ```
-
-   These must **NOT** appear in the list:
-   `.env`, `serviceAccount.json`, `sample_data`, `cleaned`, `solution.csv`
-
-   If any of them appear, add the name to `.gitignore`, save, and run `git status` again.
-
-3. Upload:
-
-   ```powershell
-   git add .
-   git commit -m "backend ready for deploy"
-   git push
-   ```
-
-   If you have no repository yet, create an empty one on github.com, then run:
-
-   ```powershell
-   git init
-   git add .
-   git commit -m "backend"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_NAME/YOUR_REPO.git
-   git push -u origin main
-   ```
-
-4. Look at the repository on github.com and check:
-   - You can see `Dockerfile`, `server/`, `solver/`, `tools/`
-   - You can **NOT** see `.env` or `serviceAccount.json`
-
-   > If you see `serviceAccount.json` on GitHub: **stop.** Go to Firebase → Project settings → Service accounts, delete that key, and make a new one. Never share it.
-
-5. **Where is the Dockerfile?**
-   - At the top of the repository → OK.
-   - Inside the `Backend` folder (repository top folder is `AI_2_69`) → in Part 4, set **Root Directory** to `Backend`.
-
----
-
-## Part 3 – Make the Firebase key text (Base64)
-
-Render cannot use your key file, so we turn it into one line of text.
-
-1. PowerShell:
-
-   ```powershell
-   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Ai\AI_2_69\Backend\serviceAccount.json")) | Set-Clipboard
-   ```
-
-2. Open Notepad and paste (Ctrl+V).
-
-3. **Check:** the text must start with `ew`.
-   - Starts with `ew` → good.
-   - Starts with something else → wrong, do step 1 again.
-
-   It is **one** very long line: no spaces, no line breaks.
-
-4. Keep Notepad open. You will paste this text into Render soon. Do not send it to anyone.
-
----
-
-## Part 4 – Create the web service on Render
-
-1. Go to <https://render.com> and sign in with GitHub.
-2. Click **New +** → **Web Service**.
-3. Connect your GitHub repository and select it.
-4. Fill in the form:
-
-   | Field | Value |
-   |---|---|
-   | Name | `phupha-timetable` (any name) |
-   | Region | the nearest one (e.g. Singapore) |
-   | Branch | `main` |
-   | Root Directory | empty (write `Backend` only if the Dockerfile is inside `Backend`, see Part 2 step 5) |
-   | Runtime / Language | **Docker** |
-   | Instance Type | see the notes below |
-
-5. **Instance type**
-   - **Free** is OK only for testing. It is slow, and it may go to sleep when nobody uses it. The first request after sleeping can take a long time. Solving may also be slower.
-   - For competition day, use a **paid** instance with more CPU and memory if you can. OR-Tools uses several CPU cores.
-   - Check current prices and limits on the Render website.
-
-6. Scroll to **Environment Variables** and add:
-
-   | Name | Value |
-   |---|---|
-   | `ADMIN_USER` | your login name |
-   | `ADMIN_PASS` | your strong password |
-   | `FIREBASE_DATABASE_URL` | `https://xxxx-default-rtdb....firebasedatabase.app` |
-   | `FIREBASE_SERVICE_ACCOUNT_B64` | the long text from Part 3 |
-   | `PYTHON_BIN` | `/opt/venv/bin/python` |
-
-   **Do NOT add:**
-   - `AUTH_DISABLED` (it would turn off the login)
-   - `PORT` (Render sets it by itself)
-
-7. In **Advanced** (if you see it), set **Health Check Path** to `/api/health`.
-
-8. Click **Create Web Service** (or Deploy).
-
----
-
-## Part 5 – Wait for the build
-
-1. Render shows a log. The first build can take several minutes (it installs Python and OR-Tools).
-2. Success looks like `Server on :XXXX (db: firebase)`, and the status becomes **Live**.
-3. Copy your address from the top of the page, for example `https://phupha-timetable.onrender.com`.
-
----
-
-## Part 6 – Test the live server
-
-1. Open in the browser:
-
-   ```
-   https://YOUR-URL/api/health
-   ```
-
-   You want `"ok":true`, `"mode":"firebase"` and a python version.
-
-2. Log in (PowerShell). The server now needs a login:
-
-   ```powershell
-   $u = "https://YOUR-URL/api"
-   $t = (Invoke-RestMethod -Method Post -Uri "$u/login" -ContentType "application/json" -Body (@{user="your_login_name"; pass="your_strong_password"} | ConvertTo-Json)).token
-   $h = @{Authorization="Bearer $t"}
-   ```
-
-3. Upload the sample data:
-
-   ```powershell
-   $files = Get-ChildItem sample_data\*.csv | ForEach-Object { "-F"; "files=@$($_.FullName)" }
-   $r = curl.exe -s -H "Authorization: Bearer $t" @files "$u/upload" | ConvertFrom-Json
-   $sid = $r.sessionId
-   ```
-
-4. Validate:
-
-   ```powershell
-   $v = Invoke-RestMethod -Method Post -Uri "$u/validate" -Headers $h -ContentType "application/json" -Body (@{sessionId=$sid} | ConvertTo-Json)
-   $v.canGenerate
-   ```
-
-5. Generate:
-
-   ```powershell
-   $j = Invoke-RestMethod -Method Post -Uri "$u/generate" -Headers $h -ContentType "application/json" -Body (@{sessionId=$sid; method="cpsat"; timeLimitSec=20} | ConvertTo-Json)
-   Invoke-RestMethod "$u/jobs/$($j.jobId)" -Headers $h
-   ```
-
-   Run the last line again until `status` is `done`.
-
-6. Download and check:
-
-   ```powershell
-   Invoke-WebRequest "$u/export/$sid/solution.csv" -Headers $h -OutFile solution_live.csv
-   ```
-
-7. Test from your **phone** (mobile data, not your Wi-Fi): open `https://YOUR-URL/api/health`. If it opens, the judges can open it too.
-
-8. Write down how long Generate took on Render. Use it to set the time limit for competition day.
-
----
-
-## Part 7 – Update the server later
-
-Every time you change the code:
+### 3.2 สุ่มรหัส `JWT_SECRET` (อย่างน้อย 32 bytes)
+เปิด PowerShell หรือ Terminal แล้วรัน:
 
 ```powershell
-git add .
-git commit -m "what you changed"
-git push
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
+คัดลอกรหัส hex ยาวๆ ที่ได้เก็บไว้เป็นค่า `JWT_SECRET`
 
-Render builds again by itself (Auto-Deploy). Wait until it is **Live**, then test `/api/health` again.
-
-If you change only an environment variable: Render dashboard → your service → **Environment** → edit → save. It will restart.
-
----
-
-## Part 8 – If something fails
-
-| Problem | What to do |
-|---|---|
-| Build fails with `client: not found` | You skipped Part 1. Create `client\.gitkeep`, commit, push. |
-| Build fails: `Dockerfile: no such file` | Set **Root Directory** to `Backend` (Part 2 step 5), or move the Dockerfile to the top of the repository. |
-| Health shows `"mode":"memory"` | `FIREBASE_DATABASE_URL` or `FIREBASE_SERVICE_ACCOUNT_B64` is missing or wrong. Find `[db] Firebase init failed ...` in the Render logs. The base64 text must start with `ew` and be one line. |
-| Health shows `ok:false` and python not ok | `PYTHON_BIN` must be exactly `/opt/venv/bin/python` on Render. |
-| Job `failed`: `Cannot start Python` | Same: on Render `PYTHON_BIN` is `/opt/venv/bin/python` (on your Windows computer it is just `python`). |
-| Every request says `Login required` | Call `/api/login` first and send the token (Part 6 step 2). This is correct behaviour. |
-| Generate is very slow, or the service restarts while solving | The instance may be too small (CPU or memory). Use a bigger instance or lower `timeLimitSec`. |
-| First request after a while is very slow | A free instance may be sleeping. Open `/api/health` a few minutes before the judges test, to wake it up. |
+### 3.3 กำหนด `APP_ORIGIN`
+จะเป็น URL ของ Render Service ของคุณ เช่น:
+`https://phupha-timetable.onrender.com`
+*(หากยังไม่ทราบชื่อตอนสร้าง ให้ใส่เป็นชื่อที่คุณจะตั้ง แล้วมาอัปเดตหลัง Service ถูกสร้างเสร็จ)*
 
 ---
 
-## Final checklist before 16:30
+## 4. ขั้นตอนการสร้าง Web Service บน Render
 
-- [ ] `/api/health` is `ok:true` and `mode:firebase`
-- [ ] Login works with `ADMIN_USER` / `ADMIN_PASS`
-- [ ] Upload → Validate → Generate → Export works on the live URL
-- [ ] It opens from a phone or another computer
-- [ ] `ADMIN_PASS` is not the default
-- [ ] No secret key is on GitHub
-- [ ] You sent the URL, the test account, the GitHub link and `solution.csv`
+### วิธีที่ 1: ใช้ Render Blueprint (แนะนำ - ง่ายที่สุด)
+1. ไปที่ Dashboard ของ Render: <https://dashboard.render.com>
+2. คลิก **New +** → **Blueprint**
+3. เลือก GitHub Repository ของคุณ
+4. Render จะอ่านไฟล์ `render.yaml` ที่เราเตรียมไว้ให้โดยอัตโนมัติ
+5. กรอกค่า Environment Variables ตามช่องที่ Render ร้องขอ
+6. กด **Apply** เพื่อเริ่ม Deploy ทันที
+
+---
+
+### วิธีที่ 2: สร้าง Web Service แบบ Manual (กำหนดเองทีละขั้นตอน)
+
+1. ไปที่ Dashboard ของ Render: <https://dashboard.render.com>
+2. คลิกปุ่ม **New +** → เลือก **Web Service**
+3. เลือก **Build and deploy from a Git repository** แล้วกด **Next**
+4. เลือก Repository ของคุณ แล้วกด **Connect**
+5. กำหนดการตั้งค่าในหน้า Form ดังนี้:
+
+| ฟิลด์ (Field) | ค่าที่ต้องกรอก (Value) | คำอธิบาย |
+|---|---|---|
+| **Name** | `phupha-timetable` | ชื่อ Web Service (จะกลายเป็น subdomain `.onrender.com`) |
+| **Region** | `Singapore` | แนะนำเลือกสิงคโปร์ เพื่อความเร็วและ latency ต่ำ |
+| **Branch** | `main` หรือ `Demo_1` | Branch ที่ต้องการ Deploy |
+| **Root Directory** | *เว้นว่างไว้ (Empty)* | **สำคัญมาก:** ต้องเว้นว่าง เพื่อให้ Docker build context อยู่ที่ root ของ repo |
+| **Runtime / Environment** | **Docker** | เลือกเป็น Docker |
+| **Dockerfile Path** | `Backend/Dockerfile` | **สำคัญ:** ระบุ path ไปยัง Dockerfile |
+| **Instance Type** | `Free` หรือ `Starter` | ฟรีใช้ทดสอบได้ (หากใช้แข่งขัน/งานจริง แนะนำ Starter ขึ้นไปเพื่อ CPU สำหรับ OR-Tools) |
+
+6. เลื่อนลงมาที่หัวข้อ **Environment Variables** แล้วกด **Add Environment Variable** เพิ่มทีละรายการ:
+
+| Key | Value ตัวอย่าง / คำอธิบาย | จำเป็นหรือไม่ |
+|---|---|---|
+| `NODE_ENV` | `production` | **จำเป็น** |
+| `PORT` | `3000` | **จำเป็น** |
+| `PYTHON_BIN` | `/opt/venv/bin/python` | **จำเป็น** |
+| `APP_ORIGIN` | `https://phupha-timetable.onrender.com` | **จำเป็น** (ต้องขึ้นต้นด้วย `https://` ตรงกับ URL ของ Render) |
+| `JWT_SECRET` | *(ค่า hex ที่สุ่มได้จากข้อ 3.2)* | **จำเป็น** (อย่างน้อย 32 ตัวอักษร) |
+| `FIREBASE_DATABASE_URL` | `https://xxxx-default-rtdb.asia-southeast1.firebasedatabase.app` | **จำเป็น** |
+| `FIREBASE_SERVICE_ACCOUNT_B64` | *(ข้อความ Base64 ที่ได้จากข้อ 3.1)* | **จำเป็น** |
+| `TRUST_PROXY_HOPS` | `1` | **แนะนำ** (สำหรับการทำงานหลัง Reverse Proxy ของ Render) |
+| `GOOGLE_CLIENT_ID` | `xxxx.apps.googleusercontent.com` | ใส่หากต้องการใช้ปุ่ม Google Sign-In |
+| `SMTP_HOST` | `smtp.gmail.com` | ใส่หากต้องการระบบส่ง OTP ทาง Email |
+| `SMTP_PORT` | `465` | พอร์ต SMTP (465 สำหรับ SSL/TLS) |
+| `SMTP_USER` | `your-email@gmail.com` | อีเมลที่ใช้ส่ง |
+| `SMTP_PASS` | `xxxx xxxx xxxx xxxx` | Google App Password (16 หลัก) |
+| `SMTP_FROM` | `your-email@gmail.com` | อีเมลผู้ส่ง |
+| `SEED_TEST_USERS` | `0` (หรือ `1` เฉพาะตอนสร้างบัญชีเริ่มต้น) | หากตั้งเป็น `1` จะสร้าง test accounts อัตโนมัติ |
+
+7. ขยายหัวข้อ **Advanced**:
+   - **Health Check Path:** ใส่ `/api/health`
+   - **Auto-Deploy:** เลือก `Yes` หากต้องการให้ Deploy อัตโนมัติทุกครั้งที่ git push
+
+8. คลิกปุ่ม **Create Web Service**
+
+---
+
+## 5. การตรวจสอบผลการ Deploy (Verification)
+
+1. ดูแท็บ **Logs** บน Render:
+   - Render จะดึง Docker Image, ติดตั้ง dependencies ของ Vue, build frontend, ติดตั้ง Python venv + OR-Tools และ Node dependencies
+   - เมื่อเสร็จสิ้น จะมี Log ขึ้นว่า:
+     ```text
+     Server on :3000 (db: firebase)
+     ==> Your service is live 🎉
+     ```
+2. **ทดสอบ Health Check:**
+   เปิดเบราว์เซอร์ไปที่:
+   ```text
+   https://YOUR-APP.onrender.com/api/health
+   ```
+   ผลลัพธ์ที่ถูกต้องจะเป็น JSON:
+   ```json
+   {
+     "ok": true,
+     "db": {
+       "mode": "firebase",
+       "ok": true
+     },
+     "python": {
+       "ok": true,
+       "version": "3.10.x 9.15.x"
+     }
+   }
+   ```
+3. **ทดสอบเปิดหน้าเว็บ:**
+   เปิดไปที่ `https://YOUR-APP.onrender.com`
+   - ระบบจะแสดงหน้า Login/Register ของ Phu Pha Digital Campus
+   - สามารถสมัครสมาชิก และเข้าใช้งานระบบจัดตารางสอนได้ทันที
+
+---
+
+## 6. การสร้างบัญชีผู้ดูแลระบบ (Admin Account Setup)
+
+มี 2 วิธีในการสร้าง Admin:
+
+### วิธีที่ 1: ผ่าน Firebase Console โดยตรง (แนะนำและปลอดภัยที่สุด)
+1. สมัครสมาชิกผ่านหน้าเว็บที่ Deploy แล้วตามปกติ
+2. เปิด **Firebase Console** → ไปที่ **Realtime Database**
+3. ไปที่ node `authUsers` → หา user ที่คุณเพิ่งสมัคร
+4. เปลี่ยนฟิลด์ `"role": "user"` ให้เป็น `"role": "admin"`
+5. บัญชีของคุณจะมีสิทธิ์เข้าเมนู `/admin` ทันที
+
+### วิธีที่ 2: ใช้คำสั่ง Seed ในเครื่อง
+หากต้องการรัน seed ไปยัง Firebase จากเครื่องของคุณ:
+1. ตั้งค่า `.env` ในโฟลเดอร์ `Backend/` ให้เชื่อมต่อ Firebase
+2. รันคำสั่งใน `Backend/server`:
+   ```powershell
+   npm run seed
+   ```
+3. ระบบจะสร้าง admin account ตามที่กำหนดไว้
+
+---
+
+## 7. ปัญหาที่พบบ่อยและการแก้ไข (Troubleshooting)
+
+### Q1: กดปุ่มหรือส่งคำขอแล้วขึ้น Error `403 Untrusted request origin`
+- **สาเหตุ:** ค่า `APP_ORIGIN` ใน Render ไม่ตรงกับ URL จริงของ Web Service
+- **วิธีแก้:** ไปที่ Render Dashboard → Environment Variables → ตรวจสอบว่า `APP_ORIGIN` มีค่าตรงกับ `https://your-service.onrender.com` (ต้องมี `https://` และไม่มี `/` ปิดท้าย) จากนั้นกด Save Changes
+
+### Q2: Deploy ล้มเหลวที่ขั้นตอน Docker Build
+- **สาเหตุ:** ตั้งค่า **Root Directory** เป็น `Backend` แทนที่จะเว้นว่างไว้
+- **วิธีแก้:** ไปที่ Settings บน Render → ตรวจสอบว่า **Root Directory** ว่างเปล่า และ **Dockerfile Path** คือ `Backend/Dockerfile`
+
+### Q3: Server เริ่มต้นไม่สำเร็จ (Firebase is required in production)
+- **สาเหตุ:** ไม่ได้ใส่ `FIREBASE_DATABASE_URL` หรือ `FIREBASE_SERVICE_ACCOUNT_B64` หรือใส่ผิดรูปแบบ
+- **วิธีแก้:** ตรวจสอบว่าแปลงไฟล์ `serviceAccount.json` เป็น Base64 ครบถ้วน ไม่มีเว้นวรรค และ URL ถูกต้อง
+
+### Q4: หน้าเว็บโหลดช้ามากในครั้งแรก (Render Free Tier)
+- **สาเหตุ:** บนแพ็กเกจ Free ของ Render เมื่อไม่มีผู้ใช้งานประมาณ 15 นาที ระบบจะเข้าสู่โหมด Sleep (Spindown)
+- **วิธีแก้:** คำขอแรกจะใช้เวลาตื่นประมาณ 30-50 วินาที ซึ่งเป็นปกติของ Free Tier หากต้องการให้ระบบพร้อมใช้งานตลอดเวลา แนะนำอัปเกรดเป็นแพ็กเกจ Starter หรือใช้บริการ Uptime monitoring ยิง ping มาที่ `/api/health` เป็นระยะ
