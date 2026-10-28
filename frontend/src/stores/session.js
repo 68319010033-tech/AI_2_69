@@ -15,10 +15,17 @@ export const useSessionStore = defineStore('session', () => {
     const error = ref('')
     const validated = ref(false)   // ตั้งเป็น true เมื่อ validate ผ่านไม่มี blocking error
     const generated = ref(false)   // ตั้งเป็น true เมื่อ generate สำเร็จ
+    const issues = ref([])
+    const log = ref([])
+    const stats = ref(null)
+    const validating = ref(false)
+    const validateError = ref('')
 
 
     const missing = computed(() => REQUIRED_FILES.filter((n) => !files.value[n]))
     const ready = computed(() => missing.value.length === 0)
+    const errorCount = computed(() => issues.value.filter((i) => i.severity === 'error').length)
+    const warnCount = computed(() => issues.value.filter((i) => i.severity === 'warning').length)
     const canNext = computed(() => Object.keys(files.value).length > 0)
     // ขั้นสูงสุดที่เข้าได้
     const maxStep = computed(() => {
@@ -82,5 +89,26 @@ export const useSessionStore = defineStore('session', () => {
         return { headers: headers.map((h) => h.trim()), data }
     }
 
-    return { sessionId, files, uploading, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload }
+
+    async function validate() {
+        validating.value = true
+        validateError.value = ''
+        try {
+            const res = await api.validate(sessionId.value)
+            issues.value = res.issues
+            log.value = res.log
+            stats.value = res.stats
+            validated.value = res.issues.every((i) => i.severity !== 'error')
+        } catch (e) {
+            validateError.value = e.response?.data?.message || 'ตรวจสอบข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง'
+        } finally {
+            validating.value = false
+        }
+    }
+
+
+    return {
+        sessionId, files, uploading, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload
+        , issues, log, stats, validating, validateError, errorCount, warnCount, validate
+    }
 })
