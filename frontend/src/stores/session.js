@@ -15,6 +15,39 @@ export const useSessionStore = defineStore('session', () => {
     const sourceSessionId = ref('')
     const serverRevision = ref('')
     const dirty = ref(false)
+    const term = ref('')
+    const lastGeneratedAt = ref('')
+    const scheduleError = ref('')
+    const history = ref([])
+    const canUndo = computed(() => history.value.length > 0 && !editingLocked.value)
+    function remember() {
+        history.value.push(JSON.stringify(files.value))
+        if (history.value.length > 20) history.value.shift()
+    }
+    function undo() {
+        if (!canUndo.value) return
+        const previous = JSON.parse(history.value.pop())
+        invalidateResults()
+        files.value = previous
+        reviewIssues.value = []
+        saveDraft()
+    }
+    function setTerm(value) { term.value = value.slice(0, 80); saveDraft() }
+    function backupData() {
+        return JSON.stringify({ version: 1, term: term.value, files: Object.fromEntries(Object.entries(files.value).map(([name, entry]) => [name, { headers: entry.headers, data: entry.data }])) }, null, 2)
+    }
+    function restoreBackup(text) {
+        if (editingLocked.value) return false
+        const saved = JSON.parse(text)
+        if (saved.version !== 1 || !saved.files || !Object.keys(saved.files).length || !Object.entries(saved.files).every(([name, entry]) => REQUIRED_FILES.includes(name) && Array.isArray(entry.headers) && entry.headers.length && entry.headers.every(h => typeof h === 'string') && Array.isArray(entry.data) && entry.data.every(row => Array.isArray(row) && row.length === entry.headers.length && row.every(c => typeof c === 'string')))) throw new Error('Invalid backup file')
+        remember()
+        invalidateResults()
+        files.value = Object.fromEntries(Object.entries(saved.files).map(([name, entry]) => [name, { ...entry, rows: entry.data.length }]))
+        term.value = typeof saved.term === 'string' ? saved.term.slice(0, 80) : ''
+        reviewIssues.value = []
+        saveDraft()
+        return true
+    }
     const draftStatus = ref('')
     const refreshStatus = ref('')
     const remoteAvailable = ref(false)
@@ -64,7 +97,7 @@ export const useSessionStore = defineStore('session', () => {
         try {
             const data = Object.fromEntries(Object.entries(files.value).map(([name, entry]) =>
                 [name, { headers: entry.headers, data: entry.data, rows: entry.data.length }]))
-            localStorage.setItem(key, JSON.stringify({ version: 1, files: data, sessionId: sessionId.value,
+            localStorage.setItem(key, JSON.stringify({ version: 1, term: term.value, lastGeneratedAt: lastGeneratedAt.value, files: data, sessionId: sessionId.value,
                 sourceSessionId: sourceSessionId.value, revision: serverRevision.value, dirty: dirty.value, reviewIssues: reviewIssues.value }))
             draftStatus.value = 'บันทึกฉบับร่างในเครื่องแล้ว'
         } catch {
@@ -76,6 +109,9 @@ export const useSessionStore = defineStore('session', () => {
         stopPolling()
         invalidateResults(false)
         files.value = {}
+        history.value = []
+        term.value = ''
+        lastGeneratedAt.value = ''
         reviewIssues.value = []
         sourceSessionId.value = ''
         serverRevision.value = ''
@@ -93,6 +129,8 @@ export const useSessionStore = defineStore('session', () => {
                 Array.isArray(entry.data) && entry.data.every(row => Array.isArray(row) && row.every(cell => typeof cell === 'string')))) {
                 throw new Error('Invalid draft')
             }
+            term.value = typeof saved.term === 'string' ? saved.term : ''
+            lastGeneratedAt.value = saved.lastGeneratedAt || ''
             files.value = saved.files
             for (const entry of Object.values(files.value)) entry.rows = entry.data.length
             dirty.value = saved.dirty === true
@@ -143,6 +181,7 @@ export const useSessionStore = defineStore('session', () => {
 
     async function addFiles(fileList) {
         if (editingLocked.value) return
+        remember()
         reading.value = true
         error.value = ''
         try {
@@ -170,6 +209,7 @@ export const useSessionStore = defineStore('session', () => {
 
     function setTable(name, headers, data) {
         if (editingLocked.value || !REQUIRED_FILES.includes(name)) return false
+        remember()
         invalidateResults()
         files.value[name] = { headers: [...headers], data: data.map(row => [...row]), rows: data.length }
         clearFileIssues(name)
@@ -179,6 +219,7 @@ export const useSessionStore = defineStore('session', () => {
 
     function removeFile(name) {
         if (editingLocked.value) return
+        remember()
         invalidateResults()
         delete files.value[name]
         clearFileIssues(name)
@@ -204,6 +245,7 @@ export const useSessionStore = defineStore('session', () => {
     function updateCell(name, row, column, value) {
         if (editingLocked.value || !files.value[name]?.data[row]) return
         if (files.value[name].data[row][column] === value) return
+        remember()
         invalidateResults()
         files.value[name].data[row][column] = value
         saveDraft()
@@ -211,6 +253,7 @@ export const useSessionStore = defineStore('session', () => {
 
     function addRow(name) {
         if (editingLocked.value || !files.value[name]) return
+        remember()
         invalidateResults()
         const entry = files.value[name]
         entry.data.push(entry.headers.map(() => ''))
@@ -220,6 +263,7 @@ export const useSessionStore = defineStore('session', () => {
 
     function removeRow(name, row) {
         if (editingLocked.value || !files.value[name]?.data[row]) return
+        remember()
         invalidateResults()
         const entry = files.value[name]
         entry.data.splice(row, 1)
@@ -237,6 +281,7 @@ export const useSessionStore = defineStore('session', () => {
     function addColumn(name, column) {
         const entry = files.value[name]
         if (editingLocked.value || !entry || entry.headers.includes(column)) return
+        remember()
         invalidateResults()
         entry.headers.push(column)
         entry.data.forEach(row => row.push(''))
@@ -297,12 +342,16 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     async function loadSchedule(m = method.value) {
+        if (!sessionId.value) { scheduleError.value = 'Generate a timetable first'; return }
+        scheduleError.value = ''
         scheduleLoading.value = true
         try {
             const r = await api.schedule(sessionId.value, m)
             schedule.value = r.items
             lists.value = { groups: r.groups || [], teachers: r.teachers || [], rooms: r.rooms || [] }
             method.value = m
+        } catch {
+            scheduleError.value = 'Unable to load timetable. Please retry.'
         } finally {
             scheduleLoading.value = false
         }
@@ -317,11 +366,14 @@ export const useSessionStore = defineStore('session', () => {
     async function poll(jobId) {
         try {
             const j = await api.getJob(jobId)
-            job.value = j
+            if (job.value?.jobId !== jobId || !generating.value) return
+            job.value = { ...j, jobId }
             if (j.status !== 'running') {
                 stopPolling()
                 generating.value = false
-                if (j.status === 'done') {
+                if (j.status === 'done' && j.valid !== false) {
+                    lastGeneratedAt.value = new Date().toISOString()
+                    saveDraft()
                     generated.value = true
                     schedule.value = [] // ให้หน้า Timetable โหลดใหม่
                 }
@@ -334,6 +386,7 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     async function startGenerate({ timeLimitSec, method }) {
+        if (editingLocked.value || !validated.value || dirty.value || !sessionId.value) return
         stopPolling()
         generating.value = true
         generateError.value = ''
@@ -342,6 +395,7 @@ export const useSessionStore = defineStore('session', () => {
         startedAt.value = Date.now()
         try {
             const { jobId } = await api.startJob({ sessionId: sessionId.value, timeLimitSec, method })
+            job.value = { ...job.value, jobId }
             timer = setInterval(() => poll(jobId), 1500)
             poll(jobId)
         } catch (e) {
@@ -350,13 +404,16 @@ export const useSessionStore = defineStore('session', () => {
         }
     }
 
-    function cancelGenerate() {
-        stopPolling()
-        generating.value = false
-        job.value = null
+    async function cancelGenerate() {
+        if (!job.value?.jobId) return
+        try {
+            await api.cancelJob(job.value.jobId)
+            await poll(job.value.jobId)
+        } catch { generateError.value = 'Unable to cancel. Please retry.' }
     }
 
     return {
+        term, setTerm, lastGeneratedAt, scheduleError, canUndo, undo, backupData, restoreBackup,
         sessionId, files, uploading, reading, editingLocked, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload,
         updateCell, addRow, removeRow, setTable, addColumn, reviewIssues,
         dirty, draftStatus, refreshStatus, remoteAvailable, refreshLatest,

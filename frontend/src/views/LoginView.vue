@@ -27,7 +27,7 @@ function changeMode(value) {
 async function complete(data) {
   auth.user = data.user
   localStorage.removeItem('sessionId')
-  await router.replace(data.user.role === 'admin' ? '/admin' : '/upload')
+  await router.replace(data.user.role === 'admin' ? '/admin' : '/')
 }
 async function requestCode() {
   await http.post('/auth/otp/request', { email: email.value, purpose: purpose.value })

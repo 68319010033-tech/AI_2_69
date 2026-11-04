@@ -6,9 +6,13 @@ const SOLVER_DIR = path.join(__dirname, '..', '..', 'solver');
 const TOOLS_DIR = path.join(__dirname, '..', '..', 'tools');
 
 // Run a Python script: JSON via stdin, JSON result on stdout, "PROGRESS {json}" lines on stderr.
-function runPython(script, cwd, input, { onProgress, timeoutMs = 300000 } = {}) {
+function runPython(script, cwd, input, { onProgress, signal, timeoutMs = 300000 } = {}) {
   return new Promise((resolve, reject) => {
     const p = spawn(PY, [script], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+    const abort = () => { p.kill('SIGKILL'); reject(new Error('Cancelled')); };
+    if (signal?.aborted) abort();
+    else signal?.addEventListener('abort', abort, { once: true });
+    p.once('close', () => signal?.removeEventListener('abort', abort));
     let out = '', err = '', buf = '';
     const timer = setTimeout(() => { p.kill('SIGKILL'); reject(new Error('Solver timed out')); }, timeoutMs);
     p.stdout.on('data', (d) => { out += d; });

@@ -1,4 +1,6 @@
 <script setup>
+import SetupGuide from '@/components/SetupGuide.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { t as tr } from '@/i18n'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -7,6 +9,7 @@ import { useSessionStore, REQUIRED_FILES } from '@/stores/session'
 const store = useSessionStore()
 const router = useRouter()
 const dragging = ref(false)
+const removeName = ref('')
 const input = ref(null)
 let refreshTimer
 function refreshLatest() {
@@ -51,11 +54,13 @@ async function next() {
         </div>
         <RouterLink to="/validate" class="mt-4 inline-block font-semibold text-primary-700"> {{ tr("กรอกหรือแก้ไขข้อมูลที่หน้าตรวจสอบข้อมูล →") }} </RouterLink>
 
+        <SetupGuide />
+        <ConfirmDialog :open="!!removeName" :title="tr('ลบไฟล์')" :message="removeName" :confirm-text="tr('ลบไฟล์')" :cancel-text="tr('Cancel')" danger @confirm="store.removeFile(removeName); removeName = ''" @cancel="removeName = ''" />
         <div class="mt-6 grid gap-6 md:grid-cols-5">
             <!-- Dropzone -->
             <div class="flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition md:col-span-3"
                 :class="dragging ? 'border-primary-500 bg-primary-50' : 'border-slate-300 hover:border-primary-500 hover:bg-primary-50'"
-                @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop"
+                role="button" tabindex="0" @keydown.enter.prevent="!store.editingLocked && input.click()" @keydown.space.prevent="!store.editingLocked && input.click()" @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop"
                 @click="!store.editingLocked && input.click()">
                 <div class="text-5xl">📂</div>
                 <p class="mt-3 font-semibold"> {{ tr("ลากไฟล์มาวางที่นี่") }} </p>
@@ -77,7 +82,7 @@ async function next() {
                         <span :class="store.files[name] ? 'text-slate-800' : 'text-slate-400'">{{ name }}</span>
                         <span v-if="store.files[name]" class="ml-auto text-slate-500">{{ store.files[name].rows }} {{ tr("แถว") }} </span>
                         <button v-if="store.files[name]" class="text-slate-400 hover:text-err" :title="tr('ลบไฟล์')"
-                            :disabled="store.editingLocked" @click="store.removeFile(name)">✕</button>
+                            :disabled="store.editingLocked" @click="removeName = name">✕</button>
                     </li>
                 </ul>
             </div>

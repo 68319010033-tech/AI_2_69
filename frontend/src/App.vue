@@ -1,4 +1,5 @@
 <script setup>
+import { lastAppError } from '@/lib/diagnostics'
 import StepperNav from '@/components/StepperNav.vue'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -12,6 +13,7 @@ async function logout() {
 </script>
 
 <template>
+  <a href="#main-content" class="sr-only focus:not-sr-only">{{ t("Skip to content") }}</a>
   <header class="flex justify-end border-b border-slate-200 bg-white px-4 py-2" aria-label="Language / ภาษา">
     <div class="flex gap-1 rounded-lg border border-slate-200 p-1">
       <button lang="th" :aria-pressed="locale === 'th'" :class="locale === 'th' ? 'bg-primary-700 text-white' : 'text-slate-600'" class="rounded px-3 py-1 text-sm" @click="setLocale('th')">ไทย</button>
@@ -25,6 +27,7 @@ async function logout() {
         <div class="text-lg font-bold text-primary-700">🗓️ {{ t('ระบบจัดตารางสอนอัจฉริยะ', 'Intelligent Timetabling') }}</div>
         <div class="text-sm text-slate-500">Phu Pha Digital Campus</div>
       </div>
+      <RouterLink to="/" class="mb-4 block rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 font-semibold text-primary-700">{{ t("Dashboard") }}</RouterLink>
       <StepperNav />
       <div class="mt-6 border-t border-slate-200 pt-4 text-sm">
         <p class="break-all font-semibold">{{ auth.user?.name }}</p>
@@ -35,7 +38,8 @@ async function logout() {
       </div>
     </aside>
 
-    <main class="min-w-0 flex-1 bg-primary-50/40">
+    <main id="main-content" class="min-w-0 flex-1 bg-primary-50/40">
+      <div v-if="lastAppError" role="alert" class="m-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{{ t(lastAppError) }} <button class="ml-3 underline" @click="lastAppError = ''">{{ t("Dismiss") }}</button></div>
       <RouterView />
     </main>
   </div>

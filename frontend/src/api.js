@@ -31,7 +31,7 @@ const FAIL = ['failed', 'error', 'infeasible']
 
 function normJob(j) {
     const s = String(j.status || '').toLowerCase()
-    const status = DONE.includes(s) ? 'done' : FAIL.includes(s) ? 'failed' : 'running'
+    const status = s === 'cancelled' ? 'cancelled' : DONE.includes(s) ? 'done' : FAIL.includes(s) ? 'failed' : 'running'
     const gap =
         j.objective != null && j.bound != null
             ? Math.abs(j.objective - j.bound) / Math.max(Math.abs(j.objective), 1)
@@ -58,6 +58,7 @@ export const api = {
         return (await http.post('/generate', { sessionId, method, timeLimitSec, seed, workers, weights })).data
     },
 
+    async cancelJob(jobId) { return (await http.delete(`/jobs/${jobId}`)).data },
     async getJob(jobId) {
         if (MOCK) {
             await sleep(100)

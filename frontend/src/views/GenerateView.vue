@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
+import { t } from '@/i18n'
 import AppIcon from '@/components/AppIcon.vue'
 
 const store = useSessionStore()
@@ -177,7 +178,7 @@ const chart = computed(() => {
           <div class="h-full rounded-full bg-primary-500 transition-all duration-200" :style="{ width: progress + '%' }" />
         </div>
         <div class="mt-1 flex justify-between text-xs text-slate-400">
-          <span>เวลาสูงสุด {{ timeLimit }} วินาที</span>
+          <span>{{ t("Elapsed time / budget (not completion percentage)") }} · {{ timeLimit }}s</span>
           <button class="text-slate-500 underline hover:text-err" @click="store.cancelGenerate()">ยกเลิก</button>
         </div>
 
@@ -276,13 +277,14 @@ const chart = computed(() => {
         <button class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-4 py-2.5 text-sm hover:bg-slate-50" @click="start">
           <AppIcon name="reset" :size="16" />คำนวณใหม่
         </button>
-        <button class="rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white hover:bg-primary-700" @click="router.push('/timetable')">
+        <button class="rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white hover:bg-primary-700" :disabled="job.valid === false" @click="router.push('/timetable')">
           ถัดไป: ดูตารางสอน →
         </button>
       </div>
     </section>
 
     <!-- ล้มเหลว / จัดไม่ได้ -->
+    <section v-else-if="job?.status === 'cancelled'" role="status" class="mt-6 rounded-xl border bg-white p-6">{{ t('Calculation cancelled. Your input data is safe.') }}</section>
     <section v-else-if="job?.status === 'failed'" class="mt-6 rounded-xl border border-err bg-white p-6 shadow-sm">
       <div class="flex items-center gap-2 text-lg font-semibold text-err">
         <AppIcon name="alert" :size="22" />{{ job.message || 'จัดตารางไม่สำเร็จ' }}
@@ -294,7 +296,7 @@ const chart = computed(() => {
           <li v-for="(r, i) in job.reasons" :key="i">{{ r }}</li>
         </ul>
       </template>
-      <p class="mt-4 text-sm text-slate-500">แก้ข้อมูลที่เกี่ยวข้อง หรือเพิ่มเวลาคำนวณ แล้วลองใหม่</p>
+      <p class="mt-4 text-sm text-slate-500">ตรวจจำนวนคาบของครู ความจุห้อง เวลาที่ไม่ว่าง และคาบที่กำหนดไว้ หากหมดเวลาค้นหาให้เพิ่มเวลาแล้วลองใหม่</p>
     </section>
 
     <div class="mt-6">

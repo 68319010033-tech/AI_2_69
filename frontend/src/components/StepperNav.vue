@@ -15,15 +15,17 @@ const steps = [
   { n: 5, to: '/export', title: 'ส่งออกผลลัพธ์', desc: 'solution.csv และรายงาน' },
 ]
 
-const current = computed(() => route.meta.step || 1)
+const current = computed(() => route.meta.step || 0)
 const state = (n) =>
   n === current.value ? 'current' : n < current.value ? 'done' : n <= store.maxStep ? 'open' : 'locked'
 </script>
 
 <template>
   <nav class="flex gap-1 overflow-x-auto md:flex-col md:gap-0">
-    <component
-      :is="state(s.n) === 'locked' ? 'div' : 'RouterLink'"
+    <RouterLink
+      :aria-disabled="state(s.n) === 'locked'"
+      :tabindex="state(s.n) === 'locked' ? -1 : 0"
+      @click="state(s.n) === 'locked' && $event.preventDefault()"
       v-for="(s, i) in steps"
       :key="s.n"
       :to="s.to"
@@ -57,6 +59,6 @@ const state = (n) =>
         </span>
         <span class="block text-sm text-slate-500">{{ t(s.desc) }}</span>
       </span>
-    </component>
+    </RouterLink>
   </nav>
 </template>

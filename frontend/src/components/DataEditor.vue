@@ -1,4 +1,5 @@
 <script setup>
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { t as tr } from '@/i18n'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useSessionStore, REQUIRED_FILES } from '@/stores/session'
@@ -6,6 +7,8 @@ import DataInputPanel from '@/components/DataInputPanel.vue'
 import { COLUMN_LABELS, normHeader } from '@/lib/inputFormat'
 import { t } from '@/i18n'
 const store = useSessionStore()
+const pendingDelete = ref(null)
+function deleteRow() { if (pendingDelete.value) store.removeRow(pendingDelete.value.file, pendingDelete.value.row); pendingDelete.value = null }
 const schema = ref({})
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI']
 const ROOM_TYPES = ['GENERAL', 'COMPUTER', 'NETWORK', 'MEDIA']
@@ -22,6 +25,11 @@ function choices(header) {
 const LIMIT = 100
 const active = ref('')
 const search = ref('')
+const onlyErrors = ref(false)
+const errorRows = computed(() => new Set(activeErrors.value.map(issue => issue.rowIndex)))
+function fileErrorCount(name) {
+return store.reviewIssues.filter(issue => issue.severity === 'error' && issue.file === name.replace('.csv', '')).length
+}
 const page = ref(1)
 const uploaded = computed(() => REQUIRED_FILES.filter((n) => store.files[n]))
 watch(
@@ -33,13 +41,14 @@ const current = computed(() => store.files[active.value])
 const filtered = computed(() => {
     const t = search.value.trim().toLowerCase()
     const all = (current.value?.data || []).map((r, i) => ({ n: i + 2, r })) // n = เลขบรรทัดในไฟล์
-    return t ? all.filter((x) => x.r.some((c) => c.toLowerCase().includes(t))) : all
+    return all.filter(x => (!onlyErrors.value || errorRows.value.has(x.n - 2)) && (!t || x.r.some(c => String(c).toLowerCase().includes(t))))
 })
 const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / LIMIT)))
 const visibleRows = computed(() => filtered.value.slice((page.value - 1) * LIMIT, page.value * LIMIT))
-watch([active, search], () => { page.value = 1 })
+watch([active, search, onlyErrors], () => { page.value = 1 })
 watch(pageCount, (count) => { page.value = Math.min(page.value, count) })
 function addRow() {
+    onlyErrors.value = false
     search.value = ''
     store.addRow(active.value)
     page.value = Math.max(1, Math.ceil(current.value.rows / LIMIT))
@@ -53,6 +62,7 @@ function errorsAt(row, column) {
 }
 const missingColumns = computed(() => activeErrors.value.filter(issue => issue.row == null && issue.column && !issue.columnIndices?.length))
 async function focusIssue(issue) {
+    onlyErrors.value = false
     active.value = issue.file.endsWith('.csv') ? issue.file : issue.file + '.csv'
     search.value = ''
     await nextTick()
@@ -67,7 +77,9 @@ defineExpose({ focusIssue })
 </script>
 <template>
     <section ref="root" class="mt-6">
-        <h2 class="text-lg font-semibold">{{ t('แก้ไขข้อมูล') }}</h2>
+        <ConfirmDialog :open="!!pendingDelete" :title="t('ลบแถว')" :message="t('Remove this row? You can undo this change.')" :confirm-text="t('ลบแถว')" :cancel-text="t('Cancel')" danger @confirm="deleteRow" @cancel="pendingDelete = null" />
+<button class="float-right rounded-lg border px-4 py-2 disabled:opacity-40" :disabled="!store.canUndo" @click="store.undo()">{{ t('Undo last edit') }}</button>
+<h2 class="text-lg font-semibold">{{ t('แก้ไขข้อมูล') }}</h2>
         <p class="mt-1 text-sm text-slate-500">{{ t('ช่องสีแดงคือค่าที่ตรวจพบข้อผิดพลาด แก้ไขแล้วกดบันทึกและตรวจสอบอีกครั้ง') }}</p>
         <p v-if="store.dirty" class="mt-2 text-sm text-amber-700">{{ t('แสดงข้อผิดพลาดจากการตรวจครั้งล่าสุด กรุณาตรวจใหม่หลังแก้ไข') }}</p>
         <p class="mt-2 text-sm text-slate-500" role="status">{{ t(store.draftStatus) }}</p>
@@ -82,14 +94,15 @@ defineExpose({ focusIssue })
                 <button v-for="n in uploaded" :key="n" class="rounded-lg px-3 py-1.5 text-sm transition"
                     :class="n === active ? 'bg-primary-600 font-semibold text-white' : 'text-slate-600 hover:bg-primary-50'"
                     @click="active = n; search = ''">
-                    {{ n }}
+                    {{ n }} <span v-if="fileErrorCount(n)" class="ml-1 rounded-full bg-red-100 px-2 text-xs font-bold text-red-800">{{ fileErrorCount(n) }}</span>
                 </button>
             </div>
 
-            <div class="flex items-center justify-between gap-3 p-3">
+            <div class="flex flex-wrap items-center justify-between gap-3 p-3">
                 <span class="text-sm text-slate-500">
                     {{ current?.rows }} {{ tr("แถว ·") }} {{ current?.headers.length }} {{ tr("คอลัมน์ · พบ") }} {{ filtered.length }} {{ tr("แถว") }} </span>
-                <input v-model="search" type="search" :placeholder="tr('ค้นหาในไฟล์นี้…')"
+                <label class="flex items-center gap-2 text-sm"><input v-model="onlyErrors" type="checkbox" />{{ t('แสดงเฉพาะแถวที่มีข้อผิดพลาด') }}</label>
+<input v-model="search" :aria-label="t('ค้นหาในไฟล์นี้…')" type="search" :placeholder="tr('ค้นหาในไฟล์นี้…')"
                     class="w-56 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none" />
             </div>
 
@@ -142,7 +155,7 @@ defineExpose({ focusIssue })
                             <td class="px-3 py-1.5">
                                 <button :disabled="store.editingLocked" :aria-label="`ลบแถว ${x.n}`"
                                     class="whitespace-nowrap text-red-600 disabled:opacity-50"
-                                    @click="store.removeRow(active, x.n - 2)"> {{ tr("ลบแถว") }} </button>
+                                    @click="pendingDelete = { file: active, row: x.n - 2 }"> {{ tr("ลบแถว") }} </button>
                             </td>
                         </tr>
                         <tr v-if="!filtered.length">

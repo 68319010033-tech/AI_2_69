@@ -6,7 +6,7 @@ const router = createRouter({
   routes: [
     { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { public: true } },
     { path: '/admin', name: 'admin', component: () => import('@/views/AdminView.vue'), meta: { admin: true } },
-    { path: '/', redirect: '/upload' },
+    { path: '/', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
     { path: '/upload', name: 'upload', component: () => import('@/views/UploadView.vue'), meta: { step: 1 } },
     { path: '/validate', name: 'validate', component: () => import('@/views/ValidationView.vue'), meta: { step: 2 } },
     { path: '/generate', name: 'generate', component: () => import('@/views/GenerateView.vue'), meta: { step: 3 } },
@@ -20,7 +20,7 @@ router.beforeEach(async to => {
   await initializeAuth()
   if (!to.meta.public && !auth.user) return '/login'
   if (to.meta.admin && auth.user?.role !== 'admin') return '/upload'
-  if (to.name === 'login' && auth.user) return '/upload'
+  if (to.name === 'login' && auth.user) return '/'
 })
 
 export default router

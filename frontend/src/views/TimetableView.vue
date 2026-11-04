@@ -1,4 +1,5 @@
 <script setup>
+import { findConflicts } from '@/lib/scheduleReview'
 import { t as tr } from '@/i18n'
 import { ref, computed, watch, onMounted } from 'vue'
 import { toPng } from 'html-to-image'
@@ -39,6 +40,9 @@ const tabs = [
 const mode = ref('group')
 const look = ref('color') // color | formal
 const selected = ref('')
+const query = ref('')
+const conflicts = computed(() => findConflicts(store.schedule))
+const matchingOptions = computed(() => options.value.filter(id => `${id} ${optionLabel(id)}`.toLowerCase().includes(query.value.toLowerCase())))
 
 const field = computed(() => tabs.find((t) => t.k === mode.value).f)
 const listKey = computed(() => ({ group: 'groups', teacher: 'teachers', room: 'rooms' })[mode.value])
@@ -67,7 +71,7 @@ function optionLabel(id) {
   return id
 }
 
-onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
+onMounted(() => { if (!store.schedule.length && store.sessionId) store.loadSchedule() })
 </script>
 
 <template>
@@ -82,6 +86,8 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
         </div>
 
         <template v-else>
+<section v-if="store.scheduleError || !store.schedule.length" class="product-card mt-6" role="status"><p>{{ tr(store.scheduleError || 'No timetable yet') }}</p><button v-if="store.sessionId" class="mt-3 text-primary-700 underline" @click="store.loadSchedule()">{{ tr('Retry') }}</button><RouterLink v-else to="/generate" class="mt-3 block text-primary-700 underline">{{ tr('Generate a timetable') }}</RouterLink></section>
+<section v-if="store.schedule.length" class="product-card mt-6" :class="conflicts.length ? 'border-red-300 bg-red-50' : ''"><h2 class="font-semibold">{{ tr('Schedule review') }}</h2><p class="mt-2 text-sm">{{ tr(conflicts.length ? 'Overlapping bookings found. Review these sessions before exporting.' : 'No overlapping teacher, room or class bookings detected.') }}</p><p class="mt-1 text-xs text-slate-500">{{ tr('This overlap check supplements the full server validation report.') }}</p><ul class="mt-3 space-y-2"><li v-for="(conflict, i) in conflicts" :key="i" class="rounded-lg border border-red-200 p-3 text-sm text-red-800">{{ conflict.a.day }} · {{ conflict.a.offering_id }} ↔ {{ conflict.b.offering_id }} · {{ conflict.resources.map(key => conflict.a[key]).join(', ') }}</li></ul></section>
             <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
                     <button v-for="t in tabs" :key="t.k" class="rounded-lg px-4 py-1.5 text-sm transition"
@@ -89,20 +95,20 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
                         @click="mode = t.k">{{ tr(t.l) }}</button>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <div class="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
                         <button v-for="l in [{ k: 'color', t: '🎨 สีสัน' }, { k: 'formal', t: '📋 ทางการ' }]" :key="l.k"
                             class="rounded-lg px-3 py-1.5 text-sm transition"
                             :class="look === l.k ? 'bg-primary-600 font-semibold text-white' : 'text-slate-600 hover:bg-primary-50'"
                             @click="look = l.k">{{ tr(l.t) }}</button>
                     </div>
-                    <select v-model="selected"
+                    <input v-model="query" type="search" :aria-label="tr('Search teachers, classes or rooms')" :placeholder="tr('Search…')" class="w-40 rounded-lg border p-2 text-sm" /><select v-model="selected" :aria-label="tr('Select timetable')"
                         class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none">
-                        <option v-for="o in options" :key="o" :value="o">{{ optionLabel(o) }}</option>
+                        <option v-for="o in matchingOptions" :key="o" :value="o">{{ optionLabel(o) }}</option>
                     </select>
                     <button
                         class="rounded-lg border border-primary-500 px-3 py-1.5 text-sm text-primary-700 hover:bg-primary-50"
-                        @click="download"> {{ tr("⬇ ดาวน์โหลดรูป") }} </button>
+                        :disabled="!sessions.length" @click="download"> {{ tr("⬇ ดาวน์โหลดรูป") }} </button>
                 </div>
             </div>
 
@@ -126,7 +132,7 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
                 <RouterLink to="/generate" class="text-slate-500 hover:text-primary-700"> {{ tr("← กลับ") }} </RouterLink>
                 <button
                     class="rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white transition hover:bg-primary-700"
-                    @click="router.push('/export')"> {{ tr("ถัดไป: ส่งออกผลลัพธ์ →") }} </button>
+                    :disabled="!store.schedule.length || conflicts.length > 0" @click="router.push('/export')"> {{ tr("ถัดไป: ส่งออกผลลัพธ์ →") }} </button>
             </div>
         </template>
     </div>

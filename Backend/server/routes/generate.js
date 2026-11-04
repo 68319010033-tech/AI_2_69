@@ -6,6 +6,7 @@ const { solveCpsat, solveBaseline, runChecker } = require('../lib/solverRunner')
 
 const router = express.Router();
 const ah = (fn) => (req, res, next) => fn(req, res, next).catch(next);
+const controllers = new Map();
 const jobs = new Map(); // in-memory copy for fast polling
 
 async function saveJob(job) { jobs.set(job.jobId, job); await db.set(`jobs/${job.jobId}`, job); }
@@ -25,6 +26,8 @@ router.post('/generate', ah(async (req, res) => {
 }));
 
 async function runJob(job) {
+  const controller = new AbortController();
+  controllers.set(job.jobId, controller);
   const t0 = Date.now();
   const tick = setInterval(() => { job.elapsedSec = +((Date.now() - t0) / 1000).toFixed(1); }, 500);
   try {
@@ -32,13 +35,16 @@ async function runJob(job) {
     const input = { data, config: job.config };
     const onProgress = (p) => { job.progress = p; job.objective = p.objective ?? job.objective; };
     const r = job.method === 'cpsat'
-      ? await solveCpsat(input, { onProgress, timeoutMs: (job.config.timeLimitSec + 120) * 1000 })
-      : await solveBaseline(input, { timeoutMs: (job.config.timeLimitSec + 60) * 1000 });
+      ? await solveCpsat(input, { signal: controller.signal, onProgress, timeoutMs: (job.config.timeLimitSec + 120) * 1000 })
+      : await solveBaseline(input, { signal: controller.signal, timeoutMs: (job.config.timeLimitSec + 60) * 1000 });
+    if (controller.signal.aborted) throw new Error('Cancelled');
     job.solverStatus = r.status; job.objective = r.objective ?? job.objective; job.bound = r.bound ?? null;
     job.solverWallSec = r.wall_time; job.attempts = r.attempts; job.culprits = r.culprit_constraints || null; job.details = r.details || null;
     job.unplaced = r.unplaced || null;
     if (r.assignments && r.assignments.length) {
       const check = await runChecker(data, r.assignments);
+      if (controller.signal.aborted) throw new Error('Cancelled');
+      controllers.delete(job.jobId); // The completed result is now being saved; cancellation is too late.
       await db.set(`schedules/${job.sessionId}/${job.method}`, r.assignments);
       await db.set(`reports/${job.sessionId}/${job.method}`, { jobId: job.jobId, check, solverStatus: r.status, objective: r.objective ?? null, wall: r.wall_time, config: job.config, at: new Date().toISOString() });
       job.valid = check.valid; job.violations = check.violations_total; job.metrics = check.metrics;
@@ -47,8 +53,9 @@ async function runJob(job) {
     job.status = (r.assignments && r.assignments.length) ? 'done' : 'failed';
     if (job.status === 'failed') job.error = r.reason === 'no_candidates' ? 'Some offerings have no possible placement (see details).' : `Solver status ${r.status}: no schedule found.`;
   } catch (e) {
-    job.status = 'failed'; job.error = e.message;
+    job.status = controller.signal.aborted ? 'cancelled' : 'failed'; job.error = controller.signal.aborted ? null : e.message;
   } finally {
+    controllers.delete(job.jobId);
     clearInterval(tick);
     job.elapsedSec = +((Date.now() - t0) / 1000).toFixed(1);
     job.finishedAt = Date.now();
@@ -62,4 +69,10 @@ router.get('/jobs/:jobId', ah(async (req, res) => {
   res.json(j);
 }));
 
+router.delete('/jobs/:jobId', ah(async (req, res) => {
+  const controller = controllers.get(req.params.jobId);
+  if (!controller) return res.status(409).json({ message: 'This job has finished or cannot be cancelled.' });
+  controller.abort();
+  res.json({ status: 'cancelling' });
+}));
 module.exports = router;
