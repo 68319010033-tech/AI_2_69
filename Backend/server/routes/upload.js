@@ -9,6 +9,24 @@ const { FILES, FILE_NAMES } = require('../lib/schema');
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 20 } });
 const ah = (fn) => (req, res, next) => fn(req, res, next).catch(next);
+const revisionOf = raw => crypto.createHash('sha256').update(JSON.stringify(raw)).digest('hex');
+router.get('/data/schema', (req, res) => res.json({ files: FILES }));
+
+// Only return the signed-in user's latest upload (or their previous session).
+router.get('/data/latest', ah(async (req, res) => {
+  const sessionId = await db.get(`latestUploads/${req.user.id}`) || req.query.sessionId;
+  if (!sessionId) return res.json({ sessionId: null });
+  await ownsSession(req, sessionId);
+  const raw = await db.get(`sessions/${sessionId}/raw`) || {};
+  const files = {};
+  for (const name of FILE_NAMES) {
+    if (!raw[name]) continue;
+    const headers = db.arr(raw[name].headers);
+    const data = db.arr(raw[name].rows).map(row => headers.map(header => String(row[header.key] ?? '')));
+    files[`${name}.csv`] = { headers: headers.map(header => header.orig), data, rows: data.length };
+  }
+  res.json({ sessionId, revision: revisionOf(raw), files });
+}));
 
 // POST /api/upload  (multipart; any field name; file name must be one of the 10 names, e.g. groups.csv)
 router.post('/upload', upload.any(), ah(async (req, res) => {
@@ -27,7 +45,11 @@ router.post('/upload', upload.any(), ah(async (req, res) => {
   const missing = FILE_NAMES.filter((n) => !rawKeys.includes(n));
   const prev = (await db.get(`sessions/${sessionId}/meta`)) || {};
   await db.update(`sessions/${sessionId}/meta`, { ownerId: prev.ownerId || req.user.id, createdAt: prev.createdAt || new Date().toISOString(), status: 'uploaded', canGenerate: false });
-  res.json({ sessionId, files: summary, missing, complete: missing.length === 0 });
+  if (summary.length && summary.every(file => file.recognized && !file.error)) {
+    await db.set(`latestUploads/${req.user.id}`, sessionId);
+  }
+  const revision = revisionOf(await db.get(`sessions/${sessionId}/raw`) || {});
+  res.json({ sessionId, revision, files: summary, missing, complete: missing.length === 0 });
 }));
 
 module.exports = router;

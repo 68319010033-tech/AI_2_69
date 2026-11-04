@@ -21,7 +21,42 @@ async function user(email = 'test@example.com', role = 'user') {
   return id;
 }
 async function login(email = 'test@example.com') { return post('/auth/login', { email, password }); }
-beforeEach(async () => { await db.remove('authUsers'); await db.remove('authLoginAttempts'); await db.remove('sessions'); sent.length = 0; });
+beforeEach(async () => { await db.remove('authUsers'); await db.remove('authLoginAttempts'); await db.remove('sessions'); await db.remove('latestUploads'); sent.length = 0; });
+
+test('latest upload refresh is authenticated, isolated by owner and includes a revision', async () => {
+  await request(app).get('/api/data/latest').expect(401);
+  await user(); const owner = cookies(await login());
+  const empty = await request(app).get('/api/data/latest').set('Cookie', owner).expect(200);
+  assert.equal(empty.body.sessionId, null);
+  const upload = await request(app).post('/api/upload').set('Origin', origin).set('Cookie', owner)
+    .attach('files', Buffer.from('group_id,group_name\nG1,One'), 'groups.csv').expect(200);
+  const sid = upload.body.sessionId;
+  const latest = await request(app).get('/api/data/latest').set('Cookie', owner).expect(200);
+  assert.equal(latest.body.sessionId, sid);
+  assert.equal(latest.body.revision, upload.body.revision);
+  assert.deepEqual(latest.body.files['groups.csv'].data, [['G1', 'One']]);
+  await user('other@example.com'); const other = cookies(await login('other@example.com'));
+  const otherLatest = await request(app).get('/api/data/latest').set('Cookie', other).expect(200);
+  assert.equal(otherLatest.body.sessionId, null);
+  await request(app).get(`/api/data/latest?sessionId=${sid}`).set('Cookie', other).expect(404);
+  const edited = await request(app).post('/api/upload').set('Origin', origin).set('Cookie', owner)
+    .attach('files', Buffer.from('group_id,group_name\nG1,Changed'), 'groups.csv').expect(200);
+  const refreshed = await request(app).get('/api/data/latest').set('Cookie', owner).expect(200);
+  assert.equal(refreshed.body.sessionId, edited.body.sessionId);
+  assert.notEqual(refreshed.body.revision, latest.body.revision);
+  assert.equal(refreshed.body.files['groups.csv'].data[0][1], 'Changed');
+});
+
+test('input schema exposes required fields and reference supplementary columns only to signed-in users', async () => {
+  await request(app).get('/api/data/schema').expect(401);
+  await user(); const owner = cookies(await login());
+  const response = await request(app).get('/api/data/schema').set('Cookie', owner).expect(200);
+  assert.equal(Object.keys(response.body.files).length, 10);
+  assert.equal(response.body.files.groups.cols.size.required, true);
+  assert.ok(response.body.files.groups.cols.size.aliases.includes('student_count'));
+  assert.equal(response.body.files.timeslots.cols.start_time.required, false);
+  assert.equal(response.body.files.shared_students.cols.shared_student_count.required, false);
+});
 
 test('registration verifies email, ignores admin role and consumes OTP once', async () => {
   await post('/auth/register', { email: 'New@example.com', password, name: 'New', role: 'admin' }).expect(202);

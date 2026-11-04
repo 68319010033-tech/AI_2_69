@@ -61,7 +61,9 @@ const FILES = {
     pk: ['day', 'period'],
     cols: {
       day: col('day', ['weekday', 'day_of_week']),
-      period: col('int', ['slot', 'period_no', 'period_id', 'start_period'])
+      period: col('int', ['slot', 'period_no', 'period_id', 'start_period']),
+      start_time: col('str', ['time_start'], false),
+      end_time: col('str', ['time_end'], false)
     }
   },
   teacher_blocks: {
@@ -93,7 +95,8 @@ const FILES = {
     pk: null,
     cols: {
       group_a: col('id', ['group1', 'group_1', 'group_id_1', 'group_id1', 'group_id_a', 'g1', 'groupa', 'group_a_id', 'group_id']),
-      group_b: col('id', ['group2', 'group_2', 'group_id_2', 'group_id2', 'group_id_b', 'g2', 'groupb', 'group_b_id', 'other_group_id'])
+      group_b: col('id', ['group2', 'group_2', 'group_id_2', 'group_id2', 'group_id_b', 'g2', 'groupb', 'group_b_id', 'other_group_id']),
+      shared_student_count: col('int', ['shared_count'], false)
     }
   }
 };

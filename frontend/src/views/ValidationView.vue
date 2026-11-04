@@ -181,10 +181,10 @@ const files = computed(() => [...new Set(store.log.map((l) => l.file))])
 
       <!-- ปุ่มล่าง -->
       <div class="mt-6 flex items-center justify-between gap-4">
-        <RouterLink to="/upload" class="text-slate-500 hover:text-primary-700">← กลับ</RouterLink>
+        <RouterLink to="/upload" class="text-slate-500 hover:text-primary-700">← กลับไปแก้ไขข้อมูล</RouterLink>
         <div class="flex items-center gap-4">
           <span v-if="store.errorCount" class="text-sm text-err">
-            แก้ {{ store.errorCount }} ปัญหาก่อน แล้วอัปโหลดใหม่
+            กลับไปแก้ {{ store.errorCount }} ปัญหา แล้วกดบันทึกและตรวจสอบอีกครั้ง
           </span>
           <button
             class="rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-slate-300"

@@ -1,6 +1,8 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/api'
+import { auth } from '@/auth'
+import { parseTable } from '@/lib/inputFormat'
 
 export const REQUIRED_FILES = [
     'groups', 'teachers', 'rooms', 'courses', 'offerings',
@@ -9,9 +11,19 @@ export const REQUIRED_FILES = [
 ].map((n) => `${n}.csv`)
 
 export const useSessionStore = defineStore('session', () => {
-    const sessionId = ref(localStorage.getItem('sessionId') || '')
+    const sessionId = ref('')
+    const sourceSessionId = ref('')
+    const serverRevision = ref('')
+    const dirty = ref(false)
+    const draftStatus = ref('')
+    const refreshStatus = ref('')
+    const remoteAvailable = ref(false)
+    let refreshing = false
+    let editVersion = 0
     const files = ref({}) // { 'groups.csv': { file, rows } }
     const uploading = ref(false)
+    const reading = ref(false)
+    const editingLocked = computed(() => uploading.value || reading.value || validating.value || generating.value)
     const error = ref('')
     const validated = ref(false)   // ตั้งเป็น true เมื่อ validate ผ่านไม่มี blocking error
     const generated = ref(false)   // ตั้งเป็น true เมื่อ generate สำเร็จ
@@ -44,58 +56,198 @@ export const useSessionStore = defineStore('session', () => {
         return 1
     })
 
-    async function addFiles(fileList) {
-        for (const f of fileList) {
-            const name = f.name.toLowerCase().trim()
-            if (!REQUIRED_FILES.includes(name)) continue
-            const text = await f.text()
-            const { headers, data } = parseCsv(text)
-            files.value[name] = { file: f, rows: data.length, headers, data }
+    const draftKey = () => auth.user?.id ? `timetable-draft-v1:${auth.user.id}` : null
+    function saveDraft() {
+        const key = draftKey()
+        if (!key) return
+        try {
+            const data = Object.fromEntries(Object.entries(files.value).map(([name, entry]) =>
+                [name, { headers: entry.headers, data: entry.data, rows: entry.data.length }]))
+            localStorage.setItem(key, JSON.stringify({ version: 1, files: data, sessionId: sessionId.value,
+                sourceSessionId: sourceSessionId.value, revision: serverRevision.value, dirty: dirty.value }))
+            draftStatus.value = 'บันทึกฉบับร่างในเครื่องแล้ว'
+        } catch {
+            draftStatus.value = 'บันทึกฉบับร่างไม่ได้ พื้นที่อาจเต็ม กรุณาอย่าเพิ่งปิดหรือรีเฟรชหน้า'
         }
     }
 
+    watch(() => auth.user?.id, () => {
+        stopPolling()
+        invalidateResults(false)
+        files.value = {}
+        sourceSessionId.value = ''
+        serverRevision.value = ''
+        dirty.value = false
+        remoteAvailable.value = false
+        draftStatus.value = ''
+        refreshStatus.value = ''
+        const key = draftKey()
+        if (!key) return
+        try {
+            const saved = JSON.parse(localStorage.getItem(key) || 'null')
+            if (!saved) return
+            if (saved.version !== 1 || !saved.files || !Object.entries(saved.files).every(([name, entry]) =>
+                REQUIRED_FILES.includes(name) && Array.isArray(entry.headers) && entry.headers.every(h => typeof h === 'string') &&
+                Array.isArray(entry.data) && entry.data.every(row => Array.isArray(row) && row.every(cell => typeof cell === 'string')))) {
+                throw new Error('Invalid draft')
+            }
+            files.value = saved.files
+            for (const entry of Object.values(files.value)) entry.rows = entry.data.length
+            dirty.value = saved.dirty === true
+            sessionId.value = dirty.value ? '' : saved.sessionId || ''
+            sourceSessionId.value = saved.sourceSessionId || ''
+            serverRevision.value = saved.revision || ''
+            draftStatus.value = 'กู้คืนฉบับร่างในเครื่องแล้ว'
+        } catch {
+            draftStatus.value = 'อ่านฉบับร่างเดิมไม่ได้ กรุณาเลือกไฟล์อีกครั้ง'
+        }
+    }, { immediate: true, flush: 'sync' })
+
+    async function refreshLatest() {
+        if (refreshing || editingLocked.value || !auth.user?.id) return
+        refreshing = true
+        const owner = auth.user.id
+        const version = editVersion
+        try {
+            const latest = await api.latestData(sourceSessionId.value)
+            if (owner !== auth.user?.id || version !== editVersion || editingLocked.value) return
+            if (!latest.sessionId) { refreshStatus.value = 'ยังไม่มีข้อมูลที่บันทึกบนเซิร์ฟเวอร์'; return }
+            if (latest.sessionId === sourceSessionId.value && latest.revision === serverRevision.value) {
+                refreshStatus.value = 'ตรวจสอบแล้ว ข้อมูลเป็นปัจจุบัน'
+                remoteAvailable.value = false
+                return
+            }
+            if (dirty.value) {
+                remoteAvailable.value = true
+                refreshStatus.value = 'มีข้อมูลใหม่บนเซิร์ฟเวอร์ แต่เก็บฉบับร่างที่คุณกำลังแก้ไว้'
+                return
+            }
+            invalidateResults(false)
+            files.value = latest.files
+            sessionId.value = latest.sessionId
+            sourceSessionId.value = latest.sessionId
+            serverRevision.value = latest.revision
+            remoteAvailable.value = false
+            refreshStatus.value = 'อัปเดตข้อมูลล่าสุดแล้ว'
+            saveDraft()
+        } catch {
+            refreshStatus.value = 'เชื่อมต่อไม่ได้ จะลองใหม่อัตโนมัติ ฉบับร่างยังอยู่ในเครื่อง'
+        } finally {
+            refreshing = false
+        }
+    }
+
+    async function addFiles(fileList) {
+        if (editingLocked.value) return
+        reading.value = true
+        error.value = ''
+        try {
+        for (const f of fileList) {
+            const name = f.name.toLowerCase().trim()
+            if (!REQUIRED_FILES.includes(name)) {
+                error.value = `${f.name}: ใช้ “นำเข้าไฟล์รูปแบบอื่น” เพื่อเลือกประเภทและจับคู่คอลัมน์ (ไฟล์ ZIP ให้แตกไฟล์ก่อน)`
+                continue
+            }
+            if (f.size > 10 * 1024 * 1024) throw new Error(`${name}: ไฟล์ต้องมีขนาดไม่เกิน 10 MB`)
+            const text = await f.text()
+            const { headers, data } = parseTable(text)
+            if (!headers.length) throw new Error(`${name}: ไม่พบหัวตาราง`)
+            invalidateResults()
+            files.value[name] = { file: f, rows: data.length, headers, data }
+            saveDraft()
+        }
+        } catch (e) {
+            error.value = e.message || 'อ่านไฟล์ไม่สำเร็จ'
+        } finally {
+            reading.value = false
+        }
+    }
+
+    function setTable(name, headers, data) {
+        if (editingLocked.value || !REQUIRED_FILES.includes(name)) return false
+        invalidateResults()
+        files.value[name] = { headers: [...headers], data: data.map(row => [...row]), rows: data.length }
+        saveDraft()
+        return true
+    }
+
     function removeFile(name) {
+        if (editingLocked.value) return
+        invalidateResults()
         delete files.value[name]
+        saveDraft()
+    }
+
+    function invalidateResults(markDirty = true) {
+        editVersion++
+        if (markDirty) dirty.value = true
+        sessionId.value = ''
+        validated.value = false
+        generated.value = false
+        issues.value = []
+        log.value = []
+        stats.value = null
+        schedule.value = []
+        lists.value = { groups: [], teachers: [], rooms: [] }
+        job.value = null
+        validateError.value = ''
+        generateError.value = ''
+    }
+
+    function updateCell(name, row, column, value) {
+        if (editingLocked.value || !files.value[name]?.data[row]) return
+        if (files.value[name].data[row][column] === value) return
+        invalidateResults()
+        files.value[name].data[row][column] = value
+        saveDraft()
+    }
+
+    function addRow(name) {
+        if (editingLocked.value || !files.value[name]) return
+        invalidateResults()
+        const entry = files.value[name]
+        entry.data.push(entry.headers.map(() => ''))
+        entry.rows = entry.data.length
+        saveDraft()
+    }
+
+    function removeRow(name, row) {
+        if (editingLocked.value || !files.value[name]?.data[row]) return
+        invalidateResults()
+        const entry = files.value[name]
+        entry.data.splice(row, 1)
+        entry.rows = entry.data.length
+        saveDraft()
+    }
+
+    function editedFile(name, entry) {
+        const escape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+        const csv = [entry.headers, ...entry.data].map(row => row.map(escape).join(',')).join('\r\n') + '\r\n'
+        return new File(['\uFEFF', csv], name, { type: 'text/csv;charset=utf-8' })
     }
 
     async function upload() {
+        if (editingLocked.value || !canNext.value) return false
         uploading.value = true
         error.value = ''
         try {
-            const res = await api.upload(Object.values(files.value).map((x) => x.file))
+            const res = await api.upload(Object.entries(files.value).map(([name, entry]) => editedFile(name, entry)))
+            const failed = res.files?.filter(file => file.error || file.recognized === false) || []
+            if (failed.length) throw new Error(failed.map(file => `${file.file}: ${file.error || file.message}`).join('\n'))
+            invalidateResults(false)
             sessionId.value = res.sessionId
-            localStorage.setItem('sessionId', res.sessionId)
+            sourceSessionId.value = res.sessionId
+            serverRevision.value = res.revision || ''
+            dirty.value = false
+            remoteAvailable.value = false
+            saveDraft()
             return true
         } catch (e) {
-            error.value = e.response?.data?.message || 'อัปโหลดไม่สำเร็จ ลองใหม่อีกครั้ง'
+            error.value = e.response?.data?.message || e.message || 'อัปโหลดไม่สำเร็จ ลองใหม่อีกครั้ง'
             return false
         } finally {
             uploading.value = false
         }
-    }
-
-
-    function parseCsv(text) {
-        text = text.replace(/^\uFEFF/, '')
-        const rows = []
-        let row = [], cell = '', q = false
-        for (let i = 0; i < text.length; i++) {
-            const c = text[i]
-            if (q) {
-                if (c === '"' && text[i + 1] === '"') { cell += '"'; i++ }
-                else if (c === '"') q = false
-                else cell += c
-            } else if (c === '"') q = true
-            else if (c === ',') { row.push(cell); cell = '' }
-            else if (c === '\n' || c === '\r') {
-                if (c === '\r' && text[i + 1] === '\n') i++
-                row.push(cell); cell = ''
-                rows.push(row); row = []
-            } else cell += c
-        }
-        if (cell !== '' || row.length) { row.push(cell); rows.push(row) }
-        const [headers = [], ...data] = rows.filter((r) => r.some((x) => x.trim() !== ''))
-        return { headers: headers.map((h) => h.trim()), data }
     }
 
 
@@ -176,7 +328,9 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     return {
-        sessionId, files, uploading, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload,
+        sessionId, files, uploading, reading, editingLocked, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload,
+        updateCell, addRow, removeRow, setTable,
+        dirty, draftStatus, refreshStatus, remoteAvailable, refreshLatest,
         issues, log, stats, validating, validateError, errorCount, warnCount, validate, schedule, scheduleLoading, loadSchedule,
         lists, method, job, generating, generateError, startedAt, startGenerate, cancelGenerate
     }

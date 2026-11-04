@@ -43,6 +43,10 @@ function normJob(j) {
 const normSchedule = (r) => (Array.isArray(r) ? { items: r } : r)
 
 export const api = {
+    async inputSchema() { return (await http.get('/data/schema')).data.files },
+    async latestData(sessionId) {
+        return (await http.get('/data/latest', { params: sessionId ? { sessionId } : {} })).data
+    },
     download: downloadFile,
 
     async startJob({ sessionId, timeLimitSec, method, seed = 42, workers = 8, weights }) {
@@ -102,7 +106,7 @@ export const api = {
             }
         }
         const r = (await http.post('/validate', { sessionId })).data
-        return { ...r, log: r.log ?? r.cleaningLog ?? r.logPreview ?? [] }
+        return { ...r, stats: { ...r.stats, periods: r.stats?.totalPeriods ?? r.stats?.periods }, log: r.log ?? r.cleaningLog ?? r.logPreview ?? [] }
     },
     cleanedUrl: (sid, file) => `/api/cleaned/${sid}/${file}`,
     solutionUrl: (sid) => `/api/export/${sid}/solution.csv`,
