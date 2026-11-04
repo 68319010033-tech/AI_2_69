@@ -32,6 +32,7 @@ router.get('/data/latest', ah(async (req, res) => {
 router.post('/upload', upload.any(), ah(async (req, res) => {
   if (req.body?.sessionId) await ownsSession(req, req.body.sessionId);
   const sessionId = req.body?.sessionId || crypto.randomBytes(6).toString('hex');
+  if ((await db.get(`sessions/${sessionId}/meta`))?.datasetName) return res.status(409).json({ message: 'Saved datasets are read-only. Upload a new working copy.' });
   const summary = [];
   for (const f of req.files || []) {
     const name = f.originalname.replace(/\.csv$/i, '').trim().toLowerCase();

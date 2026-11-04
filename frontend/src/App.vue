@@ -1,4 +1,5 @@
 <script setup>
+import { theme, setTheme } from '@/lib/theme'
 import { lastAppError } from '@/lib/diagnostics'
 import StepperNav from '@/components/StepperNav.vue'
 import { ref } from 'vue'
@@ -14,7 +15,8 @@ async function logout() {
 
 <template>
   <a href="#main-content" class="sr-only focus:not-sr-only">{{ t("Skip to content") }}</a>
-  <header class="flex justify-end border-b border-slate-200 bg-white px-4 py-2" aria-label="Language / ภาษา">
+  <header class="flex flex-wrap items-center justify-end gap-3 border-b border-slate-200 bg-white px-4 py-2" aria-label="Language / ภาษา">
+    <label class="flex items-center gap-2 text-sm"><span>{{ t('Appearance') }}</span><select :value="theme" :aria-label="t('Appearance')" class="rounded-lg border border-slate-200 bg-white px-3 py-2" @change="setTheme($event.target.value)"><option value="light">{{ t('Light') }}</option><option value="dark">{{ t('Dark') }}</option></select></label>
     <div class="flex gap-1 rounded-lg border border-slate-200 p-1">
       <button lang="th" :aria-pressed="locale === 'th'" :class="locale === 'th' ? 'bg-primary-700 text-white' : 'text-slate-600'" class="rounded px-3 py-1 text-sm" @click="setLocale('th')">ไทย</button>
       <button lang="en" :aria-pressed="locale === 'en'" :class="locale === 'en' ? 'bg-primary-700 text-white' : 'text-slate-600'" class="rounded px-3 py-1 text-sm" @click="setLocale('en')">English</button>

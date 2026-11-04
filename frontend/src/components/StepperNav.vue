@@ -17,7 +17,7 @@ const steps = [
 
 const current = computed(() => route.meta.step || 0)
 const state = (n) =>
-  n === current.value ? 'current' : n < current.value ? 'done' : n <= store.maxStep ? 'open' : 'locked'
+  n === current.value ? 'current' : n < current.value ? 'done' : n === 3 || n <= store.maxStep ? 'open' : 'locked'
 </script>
 
 <template>

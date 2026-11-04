@@ -7,7 +7,7 @@ import { loadExportData, buildXlsxBlob, printPdf, downloadBlob } from '@/utils/e
 import PdfPrintDialog from '@/components/PdfPrintDialog.vue'
 
 const store = useSessionStore()
-const sid = computed(() => store.sessionId)
+const sid = computed(() => store.generationSessionId)
 
 const RULES = [
   'ครูไม่สอนซ้อนเวลา',

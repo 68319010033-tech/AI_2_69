@@ -43,6 +43,8 @@ function normJob(j) {
 const normSchedule = (r) => (Array.isArray(r) ? { items: r } : r)
 
 export const api = {
+    async datasets() { return (await http.get('/datasets')).data.datasets },
+    async saveDataset(sessionId, name) { return (await http.post('/datasets', { sessionId, name })).data.dataset },
     async inputSchema() { return (await http.get('/data/schema')).data.files },
     async latestData(sessionId) {
         return (await http.get('/data/latest', { params: sessionId ? { sessionId } : {} })).data

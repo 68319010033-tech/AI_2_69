@@ -17,6 +17,7 @@ router.post('/generate', ah(async (req, res) => {
   if (!['cpsat', 'baseline'].includes(method)) return res.status(400).json({ error: 'method must be cpsat or baseline' });
   const meta = await loadMeta(sessionId);
   if (!meta) return res.status(404).json({ error: 'Session not found' });
+  if (!meta.datasetName) return res.status(409).json({ message: 'Save and select a named dataset before generating.' });
   if (!meta.canGenerate) return res.status(409).json({ error: 'Data has validation errors or was not validated. Run /api/validate and fix all errors first.' });
   const tl = Math.max(1, Math.min(Number(timeLimitSec) || 60, 600));
   const job = { jobId: crypto.randomBytes(6).toString('hex'), sessionId, method, status: 'running', startedAt: Date.now(), elapsedSec: 0, config: { timeLimitSec: tl, seed, workers, weights: weights || null } };

@@ -202,3 +202,18 @@ test('backup round trip restores data; invalid backup is atomic', () => {
     assert.throws(() => store.restoreBackup('{"version":1,"files":{"groups.csv":{"headers":["id"],"data":[[2]]}}}'))
     assert.equal(store.files['groups.csv'].data[0][0], 'G1')
 })
+
+test('generation requires a saved dataset and uses its snapshot without replacing the draft', async () => {
+    let requested
+    const store = setup({ startJob: async args => { requested = args; return { jobId: 'test-job' } }, getJob: async () => ({ status: 'done', valid: true }), schedule: async sid => { assert.equal(sid, 'saved-snapshot'); return { items: [] } } })
+    store.setTable('groups.csv', ['group_id'], [['DRAFT']])
+    await store.startGenerate({ timeLimitSec: 30, method: 'cpsat' })
+    assert.equal(requested, undefined)
+    store.selectedDataset = { id: 'saved-snapshot', name: 'Semester 1' }
+    await store.startGenerate({ timeLimitSec: 30, method: 'cpsat' })
+    await Promise.resolve()
+    assert.equal(requested.sessionId, 'saved-snapshot')
+    assert.equal(store.files['groups.csv'].data[0][0], 'DRAFT')
+    assert.equal(store.generationSessionId, 'saved-snapshot')
+    await store.loadSchedule()
+})

@@ -71,7 +71,7 @@ function optionLabel(id) {
   return id
 }
 
-onMounted(() => { if (!store.schedule.length && store.sessionId) store.loadSchedule() })
+onMounted(() => { if (!store.schedule.length && store.generationSessionId) store.loadSchedule() })
 </script>
 
 <template>
@@ -116,7 +116,7 @@ onMounted(() => { if (!store.schedule.length && store.sessionId) store.loadSched
                 {{ sessions.length }} {{ tr("รายการ ·") }} {{ totalPeriods }} {{ tr("คาบ/สัปดาห์") }} </p>
 
             <div class="mt-3 overflow-x-auto pb-8">
-                <div ref="sheet" class="min-w-[900px] rounded-2xl bg-white p-5">
+                <div ref="sheet" class="export-surface min-w-[900px] rounded-2xl bg-white p-5">
                      <div v-if="look === 'color'" class="mb-3 flex items-center justify-between">
                         <div class="text-2xl font-bold text-primary-700"> {{ tr("ตารางเรียน") }} </div>
                         <div class="rounded-full border-2 border-primary-500 px-5 py-1 font-semibold text-primary-700">

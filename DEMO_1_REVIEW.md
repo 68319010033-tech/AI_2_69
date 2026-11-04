@@ -27,3 +27,11 @@ Browser QA used an isolated in-memory local server: sign-in, sample load, valida
 
 ## Local review
 Install dependencies with `npm ci --prefix frontend` and `npm ci --prefix Backend/server`. Start the backend using the repository's existing authentication/environment setup, then run `npm run dev --prefix frontend`. No preview credentials are committed.
+
+## Theme and named datasets
+- The Appearance dropdown precedes language controls. Light/dark choice persists on this device; timetable export artwork retains its light background.
+- After validation passes, enter a dataset name and choose Save dataset and continue.
+- Generate lists the signed-in user's saved datasets. Select one to calculate; the server also rejects unnamed working sessions.
+- Each save creates a separate read-only input snapshot. Editing the working draft does not overwrite a saved dataset. Results and exports use the selected snapshot.
+- Dataset storage follows the existing backend database configuration: Firebase persists across restarts; the development memory fallback does not.
+- Verified with 20 frontend tests and 17 backend tests, plus local browser validation of dark mode and saving/selecting a named dataset.

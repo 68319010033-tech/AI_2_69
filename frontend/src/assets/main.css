@@ -32,3 +32,24 @@ button:not(:disabled), summary { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Theme overrides apply to the application, not timetable export artwork. */
+@media screen {
+  html[data-theme="dark"] { color-scheme: dark; background: #0b1220; }
+  html[data-theme="dark"] body { background: #0b1220; color: #e2e8f0; }
+  html[data-theme="dark"] :is(.bg-white, .product-card):not(.export-surface, .export-surface *) { background-color: #172235; }
+  html[data-theme="dark"] :is(.bg-slate-50, .bg-slate-100, .bg-primary-50, .bg-primary-100):not(.export-surface *) { background-color: #213347; }
+  html[data-theme="dark"] main { background-color: #0f1929; }
+  html[data-theme="dark"] :is(.text-slate-800, .text-slate-700, .text-slate-600):not(.export-surface *) { color: #e2e8f0; }
+  html[data-theme="dark"] :is(.text-slate-500, .text-slate-400):not(.export-surface *) { color: #a9b8cd; }
+  html[data-theme="dark"] :is(.text-primary-700, .text-primary-600):not(.export-surface *) { color: #6ee7b7; }
+  html[data-theme="dark"] :is(.border-slate-200, .border-slate-300, .border-primary-100):not(.export-surface *) { border-color: #40516a; }
+  html[data-theme="dark"] :is(input, textarea, select):not(.export-surface *) { background-color: #111d30; color: #e2e8f0; border-color: #52647d; }
+  html[data-theme="dark"] :is(.bg-red-50, .bg-amber-50, .bg-green-50):not(.export-surface *) { background-color: #293047; }
+  html[data-theme="dark"] :is(.text-red-700, .text-red-800, .text-red-600, .text-err):not(.export-surface *) { color: #fda4af; }
+  html[data-theme="dark"] .text-amber-700:not(.export-surface *) { color: #fcd34d; }
+  html[data-theme="dark"] .text-green-700:not(.export-surface *) { color: #86efac; }
+  html[data-theme="dark"] :is(button, a):hover:not(.export-surface *) { filter: brightness(1.12); }
+  html[data-theme="dark"] .export-surface { color-scheme: light; color: #1e293b; background: white; }
+  html[data-theme="dark"] :focus-visible { outline-color: #6ee7b7; }
+}

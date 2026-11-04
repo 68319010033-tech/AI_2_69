@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
+import DatasetPicker from '@/components/DatasetPicker.vue'
 import { t } from '@/i18n'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -27,7 +28,7 @@ const progress = computed(() => Math.min((elapsed.value / timeLimit.value) * 100
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
 const job = computed(() => store.job)
-const notReady = computed(() => !store.sessionId || !store.validated)
+const notReady = computed(() => !store.selectedDataset?.id)
 const canStart = computed(() => !notReady.value && !store.generating && timeLimit.value >= 5)
 const start = () =>
   store.startGenerate({ timeLimitSec: Math.min(Math.max(timeLimit.value || 30, 5), 600), method: 'cpsat' })
@@ -108,14 +109,15 @@ const chart = computed(() => {
 
 <template>
   <div class="mx-auto max-w-5xl p-6 md:p-10">
-    <h1 class="text-2xl font-bold text-primary-700">③ จัดตารางสอน</h1>
+    <DatasetPicker />
+    <h1 class="mt-6 text-2xl font-bold text-primary-700">③ จัดตารางสอน</h1>
     <p class="mt-1 text-slate-500">ตั้งเวลาแล้วกดเริ่ม ระบบใช้ CP-SAT คำนวณตารางที่ไม่ชนกันครบทุกเงื่อนไข</p>
 
     <!-- ยังไม่พร้อม -->
     <div v-if="notReady" class="mt-6 flex flex-wrap items-center gap-2 rounded-xl border border-warn bg-amber-50 p-4 text-warn">
       <AppIcon name="alert" :size="18" />
-      <span class="font-medium">ยังจัดตารางไม่ได้: {{ !store.sessionId ? 'ยังไม่ได้อัปโหลดข้อมูล' : 'ข้อมูลยังมี error ที่ต้องแก้' }}</span>
-      <RouterLink :to="!store.sessionId ? '/upload' : '/validate'" class="font-semibold underline">กลับไปแก้</RouterLink>
+      <span class="font-medium">ยังจัดตารางไม่ได้: {{ t('Select a saved dataset first') }}</span>
+      <RouterLink to="/validate" class="font-semibold underline">กลับไปแก้</RouterLink>
     </div>
 
     <!-- ตั้งค่า -->

@@ -13,6 +13,8 @@ export const REQUIRED_FILES = [
 export const useSessionStore = defineStore('session', () => {
     const sessionId = ref('')
     const sourceSessionId = ref('')
+    const selectedDataset = ref(null)
+    const generationSessionId = ref('')
     const serverRevision = ref('')
     const dirty = ref(false)
     const term = ref('')
@@ -108,6 +110,8 @@ export const useSessionStore = defineStore('session', () => {
     watch(() => auth.user?.id, () => {
         stopPolling()
         invalidateResults(false)
+        selectedDataset.value = null
+        generationSessionId.value = ''
         files.value = {}
         history.value = []
         term.value = ''
@@ -342,11 +346,11 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     async function loadSchedule(m = method.value) {
-        if (!sessionId.value) { scheduleError.value = 'Generate a timetable first'; return }
+        if (!generationSessionId.value) { scheduleError.value = 'Generate a timetable first'; return }
         scheduleError.value = ''
         scheduleLoading.value = true
         try {
-            const r = await api.schedule(sessionId.value, m)
+            const r = await api.schedule(generationSessionId.value, m)
             schedule.value = r.items
             lists.value = { groups: r.groups || [], teachers: r.teachers || [], rooms: r.rooms || [] }
             method.value = m
@@ -386,15 +390,17 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     async function startGenerate({ timeLimitSec, method }) {
-        if (editingLocked.value || !validated.value || dirty.value || !sessionId.value) return
+        if (editingLocked.value || !selectedDataset.value?.id) return
         stopPolling()
         generating.value = true
         generateError.value = ''
         generated.value = false
         job.value = { status: 'running' }
+        generationSessionId.value = selectedDataset.value.id
+        schedule.value = []
         startedAt.value = Date.now()
         try {
-            const { jobId } = await api.startJob({ sessionId: sessionId.value, timeLimitSec, method })
+            const { jobId } = await api.startJob({ sessionId: selectedDataset.value.id, timeLimitSec, method })
             job.value = { ...job.value, jobId }
             timer = setInterval(() => poll(jobId), 1500)
             poll(jobId)
@@ -413,6 +419,7 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     return {
+        selectedDataset, generationSessionId,
         term, setTerm, lastGeneratedAt, scheduleError, canUndo, undo, backupData, restoreBackup,
         sessionId, files, uploading, reading, editingLocked, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload,
         updateCell, addRow, removeRow, setTable, addColumn, reviewIssues,

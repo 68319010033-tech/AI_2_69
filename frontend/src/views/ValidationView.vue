@@ -8,6 +8,20 @@ import { t } from '@/i18n'
 const store = useSessionStore()
 const router = useRouter()
 const editor = ref(null)
+const datasetName = ref('')
+const savingDataset = ref(false)
+const datasetError = ref('')
+async function saveAndContinue() {
+    if (!canNext.value || !datasetName.value.trim() || savingDataset.value) return
+    savingDataset.value = true; datasetError.value = ''
+    const sessionId = store.sessionId
+    try {
+        const dataset = await api.saveDataset(sessionId, datasetName.value.trim())
+        store.selectedDataset = dataset
+        if (store.sessionId === sessionId && !store.dirty) router.push('/generate')
+    } catch (error) { datasetError.value = error.response?.data?.message || 'Unable to save dataset. Please retry.' }
+    finally { savingDataset.value = false }
+}
 const severity = ref('all')
 const search = ref('')
 const fileFilter = ref('all')
@@ -92,10 +106,11 @@ onMounted(async () => {
             <span>{{ t('ดาวน์โหลดไฟล์ที่ล้างแล้ว:') }}</span>
             <button v-for="name in Object.keys(store.files)" :key="name" class="text-primary-700 underline" @click="api.download(api.cleanedUrl(store.sessionId, name))">{{ name }}</button>
         </div>
+        <section class="product-card mt-6"><h2 class="font-semibold">{{ t('Save a named dataset') }}</h2><p class="mt-2 text-sm text-slate-500">{{ t('After validation, save a snapshot you can select later on the Generate page.') }}</p><label for="dataset-name" class="mt-4 block text-sm">{{ t('Dataset name') }}</label><input id="dataset-name" v-model="datasetName" maxlength="80" class="mt-2 w-full rounded-lg border border-slate-300 bg-white p-3" :placeholder="t('e.g. Semester 1 — final data')" :disabled="savingDataset" /><p v-if="datasetError" role="alert" class="mt-2 text-red-700">{{ t(datasetError) }}</p></section>
         <div class="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 <button :disabled="!store.canNext || store.editingLocked" class="rounded-lg bg-primary-700 px-4 py-2 font-semibold text-white disabled:opacity-40" @click="check">{{ t(store.validating ? 'กำลังตรวจสอบข้อมูล…' : store.uploading ? 'กำลังบันทึก…' : 'บันทึกและตรวจสอบอีกครั้ง') }}</button>
             <RouterLink to="/upload" class="text-primary-700">{{ t('← กลับไปอัปโหลด') }}</RouterLink>
-            <button :disabled="!canNext" class="rounded-lg bg-primary-700 px-5 py-2.5 font-semibold text-white disabled:opacity-40" @click="router.push('/generate')">{{ t('ถัดไป: จัดตารางสอน →') }}</button>
+            <button :disabled="!canNext || !datasetName.trim() || savingDataset" class="rounded-lg bg-primary-700 px-5 py-2.5 font-semibold text-white disabled:opacity-40" @click="saveAndContinue">{{ t(savingDataset ? 'Saving dataset…' : 'Save dataset and continue →') }}</button>
         </div>
     </div>
 </template>
