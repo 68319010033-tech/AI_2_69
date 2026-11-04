@@ -59,7 +59,7 @@ export function parseTable(text, delimiter = detectDelimiter(text)) {
     const headers = header.map(value => value.trim())
     if (!headers.length || headers.some(value => !value)) throw new Error('ไม่พบหัวคอลัมน์ หรือมีหัวคอลัมน์ว่าง')
     // Match the server's Firebase-safe keys to avoid overwritten values.
-    const keys = headers.map(value => value.replace(/[.$#[\]\/]/g, '_').toLowerCase())
+    const keys = headers.map(value => value.replace(/[.$#[\]/]/g, '_').toLowerCase())
     if (new Set(keys).size !== keys.length) throw new Error('หัวคอลัมน์ซ้ำกัน กรุณาตั้งชื่อให้ไม่ซ้ำ')
     for (const values of data) {
         if (values.length > headers.length) throw new Error('ข้อมูลมีคอลัมน์เกินหัวตาราง กรุณาตรวจตัวคั่นหรือเครื่องหมายคำพูด')
