@@ -37,7 +37,8 @@ export function joinSessions({ solution, offerings, courses, teachers, groups, r
       session_no: Number(s.session_no),
       day: s.day,
       start_period: Number(s.start_period),
-      length: Number(pick(c, ['session_length', 'length'], 1)),
+      // จำนวนคาบของรายการสอนอยู่ใน offerings.csv (periods) · ถ้าไม่มีค่อยลองดูใน courses.csv
+      length: Number(pick(o, ['periods'], pick(c, ['session_length', 'length'], 1))),
       course_id, course: pick(c, ['course_name', 'name', 'title'], course_id),
       teacher_id, teacher: pick(tch[teacher_id], ['teacher_name', 'name'], teacher_id),
       group_id, group: pick(grp[group_id], ['group_name', 'name'], group_id),
@@ -79,11 +80,18 @@ function groupBy(sessions, idKey, nameKey) {
   return [...m.values()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'th'))
 }
 
-const VIEWS = [
+export const VIEWS = [
   { key: 'group', label: 'รายกลุ่ม', idKey: 'group_id', nameKey: 'group', second: (s) => `${s.teacher} · ${s.room}` },
   { key: 'teacher', label: 'รายครู', idKey: 'teacher_id', nameKey: 'teacher', second: (s) => `${s.group} · ${s.room}` },
   { key: 'room', label: 'รายห้อง', idKey: 'room_id', nameKey: 'room', second: (s) => `${s.group} · ${s.teacher}` },
 ]
+
+// รายการที่เลือกพิมพ์ได้ในแต่ละมุมมอง: { group: [{ id, name, count }], teacher: [...], room: [...] }
+export function listEntries(sessions) {
+  return Object.fromEntries(
+    VIEWS.map((v) => [v.key, groupBy(sessions, v.idKey, v.nameKey).map((e) => ({ id: e.id, name: e.name, count: e.list.length }))]),
+  )
+}
 
 export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob)
@@ -213,30 +221,54 @@ function gridTable(list, second) {
   return `<table><thead><tr><th class="p">คาบ</th>${DAYS.map((d) => `<th>${d[1]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`
 }
 
-export function buildPrintHtml(sessions, title = 'ตารางเรียน') {
-  const pages = VIEWS.flatMap((v) =>
-    groupBy(sessions, v.idKey, v.nameKey).map((e) =>
-      `<section><h2>${esc(e.name)} <small>${v.label}</small></h2>${gridTable(e.list, v.second)}</section>`))
+// options:
+//   selection: { group?: id[], teacher?: id[], room?: id[] }  ไม่ใส่ = พิมพ์ทั้งหมด · มุมมองที่ไม่อยู่ในนี้ = ข้าม
+//   perPage:   1 = หน้าละ 1 ตาราง (A4 แนวนอน) · 2 = หน้าละ 2 ตาราง (A4 แนวตั้ง)
+export function buildPrintHtml(sessions, title = 'ตารางเรียน', options = {}) {
+  const { selection = null, perPage = 1 } = options
+  const items = []
+  for (const v of VIEWS) {
+    const ids = selection ? selection[v.key] : null
+    if (selection && !ids) continue
+    const allow = ids ? new Set(ids.map(String)) : null
+    for (const e of groupBy(sessions, v.idKey, v.nameKey)) {
+      if (allow && !allow.has(String(e.id))) continue
+      const total = e.list.reduce((a, s) => a + s.length, 0)
+      items.push(
+        `<section><h2>${esc(e.name)} <small>${v.label} · ${total} คาบ/สัปดาห์</small></h2>${gridTable(e.list, v.second)}</section>`,
+      )
+    }
+  }
+  if (!items.length) throw new Error('ยังไม่ได้เลือกตารางที่จะพิมพ์')
+
+  const n = perPage === 2 ? 2 : 1
+  const pages = []
+  for (let i = 0; i < items.length; i += n) pages.push(`<div class="page">${items.slice(i, i + n).join('')}</div>`)
+  const portrait = n === 2
+
   return `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
-@page { size: A4 landscape; margin: 12mm }
+@page { size: A4 ${portrait ? 'portrait' : 'landscape'}; margin: ${portrait ? '10mm' : '12mm'} }
 body { font-family: "Leelawadee UI", Tahoma, "Noto Sans Thai", sans-serif; color: #14271c; margin: 0 }
-section { page-break-after: always }
-h2 { margin: 0 0 8px; font-size: 18px; color: #123f28 } h2 small { font-size: 12px; color: #52695a; font-weight: 400 }
-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px }
-th, td { border: 1px solid #cfe0d5; padding: 4px 6px; vertical-align: top; text-align: left }
+.page { display: flex; flex-direction: column; gap: ${portrait ? '9mm' : '0'}; page-break-after: always; break-after: page }
+.page:last-child { page-break-after: auto; break-after: auto }
+section { break-inside: avoid }
+h2 { margin: 0 0 ${portrait ? '5px' : '8px'}; font-size: ${portrait ? '15px' : '18px'}; color: #123f28 } h2 small { font-size: 11px; color: #52695a; font-weight: 400 }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: ${portrait ? '10px' : '11px'} }
+th, td { border: 1px solid #cfe0d5; padding: ${portrait ? '3px 5px' : '4px 6px'}; vertical-align: top; text-align: left }
 thead th { background: #effaf2; color: #174e30; text-align: center }
-th.p { width: 70px; text-align: center; background: #fff; font-weight: 600 } th.p small { font-weight: 400; color: #52695a }
-td { height: 46px } td.s { border-left: 3px solid #1d7d47 }
-tr.lunch td { height: 18px; text-align: center; background: #f5f9f6; color: #52695a; font-size: 10px }
+th.p { width: ${portrait ? '58px' : '70px'}; text-align: center; background: #fff; font-weight: 600 } th.p small { font-weight: 400; color: #52695a }
+td { height: ${portrait ? '40px' : '52px'} } td.s { border-left: 3px solid #1d7d47 }
+tr.lunch td { height: 16px; text-align: center; background: #f5f9f6; color: #52695a; font-size: 10px }
 </style></head><body>${pages.join('')}</body></html>`
 }
 
-export function printPdf(sessions, title) {
+export function printPdf(sessions, title, options) {
+  const html = buildPrintHtml(sessions, title, options) // โยน error ก่อนสร้าง iframe ถ้าไม่ได้เลือกอะไร
   const iframe = document.createElement('iframe')
   iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'
   document.body.appendChild(iframe)
   const doc = iframe.contentDocument
-  doc.open(); doc.write(buildPrintHtml(sessions, title)); doc.close()
+  doc.open(); doc.write(html); doc.close()
   const cleanup = () => setTimeout(() => iframe.remove(), 500)
   iframe.contentWindow.onafterprint = cleanup
   setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print() }, 300)
