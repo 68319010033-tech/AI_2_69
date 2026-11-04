@@ -4,6 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useSessionStore, REQUIRED_FILES } from '@/stores/session'
 import { api } from '@/api'
 import { loadExportData, buildXlsxBlob, printPdf, downloadBlob } from '@/utils/exportSchedule'
+import PdfPrintDialog from '@/components/PdfPrintDialog.vue'
 
 const store = useSessionStore()
 const sid = computed(() => store.sessionId)
@@ -32,18 +33,27 @@ const report = ref(null)
 const loading = ref(false)
 const error = ref('')
 
-const exporting = ref('') // '' | 'xlsx' | 'pdf'
+// ---------- ส่งออกไฟล์ต่างๆ ----------
+const exporting = ref('') // '' | 'xlsx'
 const exportError = ref('')
 const XLSX_DESC = 'ตารางรายกลุ่ม ครู ห้อง (Excel)'
-const PDF_DESC = 'เปิดหน้าต่างพิมพ์ แล้วเลือก "บันทึกเป็น PDF"'
 
-async function exportTable(kind) {
-  exporting.value = kind
+// ดาวน์โหลดไฟล์จาก backend · ถ้าล้มเหลวให้แจ้งผู้ใช้ (เดิมเงียบ)
+async function dl(url) {
+  exportError.value = ''
+  try {
+    await api.download(url)
+  } catch (e) {
+    exportError.value = 'ดาวน์โหลดไม่สำเร็จ: ' + (e?.message || 'ลองใหม่อีกครั้ง')
+  }
+}
+
+async function exportXlsx() {
+  exporting.value = 'xlsx'
   exportError.value = ''
   try {
     const sessions = await loadExportData(api, sid.value)
-    if (kind === 'xlsx') downloadBlob(await buildXlsxBlob(sessions), 'timetable.xlsx')
-    else printPdf(sessions, 'ตารางเรียน')
+    downloadBlob(await buildXlsxBlob(sessions), 'timetable.xlsx')
   } catch (e) {
     exportError.value = 'สร้างไฟล์ไม่สำเร็จ: ' + e.message
   } finally {
@@ -51,6 +61,35 @@ async function exportTable(kind) {
   }
 }
 
+// ---------- PDF: เลือกตารางและรูปแบบหน้าก่อนพิมพ์ ----------
+const pdfOpen = ref(false)
+const pdfLoading = ref(false)
+const pdfError = ref('')
+const pdfSessions = ref([])
+
+async function openPdf() {
+  pdfOpen.value = true
+  pdfLoading.value = true
+  pdfError.value = ''
+  try {
+    pdfSessions.value = await loadExportData(api, sid.value)
+  } catch (e) {
+    pdfError.value = 'โหลดข้อมูลตารางไม่สำเร็จ: ' + e.message
+  } finally {
+    pdfLoading.value = false
+  }
+}
+
+function doPrint(options) {
+  try {
+    printPdf(pdfSessions.value, 'ตารางเรียน', options)
+    pdfOpen.value = false
+  } catch (e) {
+    pdfError.value = e.message
+  }
+}
+
+// ---------- ผลตรวจ ----------
 async function load() {
   loading.value = true
   error.value = ''
@@ -91,49 +130,47 @@ const metrics = computed(() =>
     <template v-else>
       <!-- ดาวน์โหลด -->
       <div class="mt-6 grid gap-4 md:grid-cols-3">
-        <a :href="api.solutionUrl(sid)" @click.prevent="api.download(api.solutionUrl(sid))" download="solution.csv"
+        <a :href="api.solutionUrl(sid)" @click.prevent="dl(api.solutionUrl(sid))" download="solution.csv"
           class="rounded-xl bg-primary-600 p-5 text-white shadow-sm transition hover:bg-primary-700">
           <div class="text-3xl">⬇</div>
           <div class="mt-2 text-lg font-bold"> {{ tr("solution.csv") }} </div>
           <div class="text-sm opacity-90"> {{ tr("ไฟล์คำตอบที่ส่งตรวจ (UTF-8 BOM)") }} </div>
         </a>
-        <a :href="api.reportUrl(sid)" @click.prevent="api.download(api.reportUrl(sid))" download="report.md"
+        <a :href="api.reportUrl(sid)" @click.prevent="dl(api.reportUrl(sid))" download="report.md"
           class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50">
           <div class="text-3xl">📄</div>
           <div class="mt-2 text-lg font-bold"> {{ tr("report.md") }} </div>
           <div class="text-sm text-slate-500"> {{ tr("รายงานสำหรับผู้ใช้งาน") }} </div>
         </a>
-        <a :href="api.cleaningLogUrl(sid)" @click.prevent="api.download(api.cleaningLogUrl(sid))"
-          download="cleaning-log"
+        <a :href="api.cleaningLogUrl(sid)" @click.prevent="dl(api.cleaningLogUrl(sid))" download="cleaning-log"
           class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50">
           <div class="text-3xl">🔧</div>
           <div class="mt-2 text-lg font-bold"> {{ tr("cleaning log") }} </div>
           <div class="text-sm text-slate-500"> {{ tr("บันทึกสิ่งที่แก้ในข้อมูลดิบ") }} </div>
         </a>
 
-        <button type="button" :disabled="!!exporting" @click="exportTable('xlsx')"
+        <button type="button" :disabled="!!exporting" @click="exportXlsx"
           class="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-primary-500 hover:bg-primary-50 disabled:opacity-60">
           <div class="text-3xl">📊</div>
           <div class="mt-2 text-lg font-bold"> {{ tr("timetable.xlsx") }} </div>
           <div class="text-sm text-slate-500">{{ tr(exporting === 'xlsx' ? 'กำลังสร้างไฟล์…' : XLSX_DESC) }}</div>
         </button>
-        <button type="button" :disabled="!!exporting" @click="exportTable('pdf')"
-          class="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-primary-500 hover:bg-primary-50 disabled:opacity-60">
+        <button type="button" @click="openPdf"
+          class="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-primary-500 hover:bg-primary-50">
           <div class="text-3xl">🖨</div>
-          <div class="mt-2 text-lg font-bold"> {{ tr("timetable.pdf") }} </div>
-         <div class="text-sm text-slate-500">{{ tr(exporting === 'pdf' ? 'กำลังเตรียม…' : PDF_DESC) }}</div>
+          <div class="mt-2 text-lg font-bold">{{ tr('พิมพ์ / บันทึกเป็น PDF') }}</div>
+          <div class="text-sm text-slate-500">{{ tr('เลือกตารางและรูปแบบการจัดหน้า') }}</div>
         </button>
-
       </div>
 
       <p v-if="exportError" class="mt-3 text-err">❌ {{ exportError }}</p>
+
       <!-- ผลตรวจ 12 ข้อ -->
       <div class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-200 p-4">
           <h2 class="font-semibold"> {{ tr("ผลตรวจเงื่อนไขบังคับ (Hard Constraints)") }} </h2>
           <span v-if="report" class="rounded-full px-3 py-1 text-sm font-semibold"
-            :class="allPass ? 'bg-primary-100 text-ok' : 'bg-red-50 text-err'">{{ allPass ? '✅ ผ่านครบ 12/12' : `❌ ผ่าน
-            ${passCount}/12` }}</span>
+            :class="allPass ? 'bg-primary-100 text-ok' : 'bg-red-50 text-err'">{{ allPass ? '✅ ผ่านครบ 12/12' : `❌ ผ่าน ${passCount}/12` }}</span>
         </div>
 
         <div v-if="loading" class="flex items-center gap-3 p-6 text-slate-600">
@@ -167,7 +204,7 @@ const metrics = computed(() =>
         <h2 class="mb-2 font-semibold"> {{ tr("ไฟล์ข้อมูลที่ทำความสะอาดแล้ว") }} </h2>
         <div class="flex flex-wrap gap-2 text-sm">
           <a v-for="f in REQUIRED_FILES" :key="f" :href="api.cleanedUrl(sid, f)"
-            @click.prevent="api.download(api.cleanedUrl(sid, f))" download
+            @click.prevent="dl(api.cleanedUrl(sid, f))" download
             class="rounded-lg border border-primary-500 px-2.5 py-1 text-primary-700 hover:bg-primary-50">⬇ {{ f }}</a>
         </div>
       </div>
@@ -177,6 +214,14 @@ const metrics = computed(() =>
       </div>
     </template>
 
-
+    <PdfPrintDialog
+      :open="pdfOpen"
+      :sessions="pdfSessions"
+      :loading="pdfLoading"
+      :error="pdfError"
+      @close="pdfOpen = false"
+      @print="doPrint"
+      @retry="openPdf"
+    />
   </div>
 </template>

@@ -14,6 +14,7 @@ if (typeof document !== 'undefined') document.documentElement.lang = locale.valu
 
 // Source labels remain readable in templates; data values and CSV identifiers are never translated.
 export const translations = {
+    'พิมพ์ / บันทึกเป็น PDF': 'Print / save as PDF', 'เลือกตารางและรูปแบบการจัดหน้า': 'Choose timetables and page layout',
     'วิทยาเขตดิจิทัลภูผา': 'PHU PHA DIGITAL CAMPUS',
     'ไฟล์': 'files', 'ยังไม่ได้อัปโหลด': 'Not uploaded:', 'แถว ·': 'rows ·', 'คอลัมน์ · พบ': 'columns · matched',
     'หน้า': 'Page', 'แถว)': 'rows)', '(จากไฟล์)': '(from file)', '— เลือก —': '— Select —',

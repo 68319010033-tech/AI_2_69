@@ -326,7 +326,7 @@ export const useSessionStore = defineStore('session', () => {
                     schedule.value = [] // ให้หน้า Timetable โหลดใหม่
                 }
             }
-        } catch (e) {
+        } catch {
             stopPolling()
             generating.value = false
             generateError.value = 'ติดต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง'
