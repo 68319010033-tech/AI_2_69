@@ -1,7 +1,9 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { t as tr } from '@/i18n'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, http } from '@/auth'
+import { locale, t, authError } from '@/i18n'
 
 const router = useRouter()
 const mode = ref('login'), step = ref('details')
@@ -12,6 +14,13 @@ const labels = { login: 'Sign in', register: 'Create account', otp: 'Email code'
 const purpose = computed(() => mode.value === 'register' || mode.value === 'verify' ? 'verify' : mode.value === 'reset' ? 'reset' : 'login')
 const timer = setInterval(() => { if (cooldown.value > 0) cooldown.value-- }, 1000)
 onUnmounted(() => clearInterval(timer))
+function renderGoogleButton() {
+  if (googleTarget.value && window.google?.accounts) {
+    googleTarget.value.replaceChildren()
+    window.google.accounts.id.renderButton(googleTarget.value, { theme: 'outline', size: 'large', text: 'continue_with', locale: locale.value })
+  }
+}
+watch(locale, renderGoogleButton)
 function changeMode(value) {
   mode.value = value; step.value = 'details'; code.value = ''; password.value = ''; error.value = ''; message.value = ''
 }
@@ -64,7 +73,7 @@ onMounted(async () => {
       catch (e) { error.value = e.response?.data?.message || 'Google sign-in failed' }
       finally { busy.value = false }
     } })
-    if (googleTarget.value) window.google.accounts.id.renderButton(googleTarget.value, { theme: 'outline', size: 'large', text: 'continue_with' })
+    renderGoogleButton()
   } catch { googleMessage.value = 'Google sign-in could not load. You can sign in with email.' }
 })
 </script>
@@ -72,38 +81,35 @@ onMounted(async () => {
 <template>
   <main class="flex min-h-screen items-center justify-center bg-primary-50 p-5">
     <section class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-      <p class="mb-2 text-sm font-semibold text-primary-700">PHU PHA DIGITAL CAMPUS</p>
-      <h1 class="text-3xl font-bold">{{ labels[mode] }}</h1>
-      <p class="mt-2 text-sm text-slate-500">Your workspace for intelligent timetabling.</p>
-      <div class="my-6 flex gap-2" aria-label="Sign-in options">
-        <button v-for="option in ['login', 'register', 'otp']" :key="option" type="button" :disabled="busy" class="flex-1 rounded-lg border p-2 text-sm" :class="mode === option ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200'" @click="changeMode(option)">{{ labels[option] }}</button>
+      <p class="mb-2 text-sm font-semibold text-primary-700"> {{ tr("PHU PHA DIGITAL CAMPUS") }} </p>
+      <h1 class="text-3xl font-bold">{{ t(labels[mode]) }}</h1>
+      <p class="mt-2 text-sm text-slate-500"> {{ tr("Your workspace for intelligent timetabling.") }} </p>
+      <div class="my-6 flex gap-2" :aria-label="tr('Sign-in options')">
+        <button v-for="option in ['login', 'register', 'otp']" :key="option" type="button" :disabled="busy" class="flex-1 rounded-lg border p-2 text-sm" :class="mode === option ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200'" @click="changeMode(option)">{{ t(labels[option]) }}</button>
       </div>
-      <p v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ error }}</p>
-      <p v-if="message" role="status" class="mb-4 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">{{ message }}</p>
+      <p v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ authError(error) }}</p>
+      <p v-if="message" role="status" class="mb-4 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">{{ t(message) }}</p>
       <form class="space-y-4" @submit.prevent="submit">
-        <label v-if="mode === 'register' && step === 'details'" class="block text-sm font-medium">Name
-          <input v-model="name" autocomplete="name" required maxlength="80" class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
+        <label v-if="mode === 'register' && step === 'details'" class="block text-sm font-medium"> {{ tr("Name") }} <input v-model="name" autocomplete="name" required maxlength="80" class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
         </label>
-        <label class="block text-sm font-medium">Email
-          <input v-model="email" type="email" autocomplete="email" required maxlength="254" :readonly="step === 'code'" class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
+        <label class="block text-sm font-medium"> {{ tr("Email") }} <input v-model="email" type="email" autocomplete="email" required maxlength="254" :readonly="step === 'code'" class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
         </label>
-        <label v-if="step === 'code'" class="block text-sm font-medium">Six-digit email code
-          <input v-model="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required class="mt-1 w-full rounded-lg border border-slate-300 p-3 tracking-widest" />
+        <label v-if="step === 'code'" class="block text-sm font-medium"> {{ tr("Six-digit email code") }} <input v-model="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required class="mt-1 w-full rounded-lg border border-slate-300 p-3 tracking-widest" />
         </label>
-        <label v-if="(step === 'details' && ['login', 'register'].includes(mode)) || (step === 'code' && ['reset', 'register', 'verify'].includes(mode))" class="block text-sm font-medium">{{ mode === 'reset' ? 'New password' : 'Password' }}
+        <label v-if="(step === 'details' && ['login', 'register'].includes(mode)) || (step === 'code' && ['reset', 'register', 'verify'].includes(mode))" class="block text-sm font-medium">{{ t(mode === 'reset' ? 'New password' : 'Password') }}
           <input v-model="password" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" :minlength="mode === 'login' ? 1 : 12" maxlength="128" required class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
-          <span v-if="mode !== 'login'" class="mt-1 block text-xs text-slate-500">Use 12–128 characters.</span>
+          <span v-if="mode !== 'login'" class="mt-1 block text-xs text-slate-500"> {{ tr("Use 12–128 characters.") }} </span>
         </label>
-        <button :disabled="busy" class="w-full rounded-lg bg-primary-700 p-3 font-semibold text-white disabled:opacity-50">{{ busy ? 'Please wait…' : step === 'code' ? (mode === 'reset' ? 'Save new password' : 'Verify and sign in') : ['otp', 'reset', 'verify'].includes(mode) ? 'Send email code' : labels[mode] }}</button>
+        <button :disabled="busy" class="w-full rounded-lg bg-primary-700 p-3 font-semibold text-white disabled:opacity-50">{{ t(busy ? 'Please wait…' : step === 'code' ? (mode === 'reset' ? 'Save new password' : 'Verify and sign in') : ['otp', 'reset', 'verify'].includes(mode) ? 'Send email code' : labels[mode]) }}</button>
       </form>
       <div v-if="step === 'code'" class="mt-4 flex justify-between text-sm">
-        <button :disabled="busy || cooldown > 0" class="text-primary-700 disabled:text-slate-400" @click="resend">{{ cooldown ? `Resend in ${cooldown}s` : 'Resend code' }}</button>
-        <button :disabled="busy" @click="changeMode(mode)">Change details</button>
+        <button :disabled="busy || cooldown > 0" class="text-primary-700 disabled:text-slate-400" @click="resend">{{ cooldown ? (locale === 'th' ? `ส่งอีกครั้งใน ${cooldown} วินาที` : `Resend in ${cooldown}s`) : t('ส่งรหัสอีกครั้ง') }}</button>
+        <button :disabled="busy" @click="changeMode(mode)"> {{ tr("Change details") }} </button>
       </div>
-      <button v-if="mode === 'login'" class="mt-4 text-sm text-primary-700" @click="changeMode('reset')">Forgot password?</button>
+      <button v-if="mode === 'login'" class="mt-4 text-sm text-primary-700" @click="changeMode('reset')"> {{ tr("Forgot password?") }} </button>
       <div v-show="mode === 'login' && step === 'details'" class="mt-6 border-t border-slate-200 pt-6">
         <div ref="googleTarget" :inert="busy || undefined"></div>
-        <p v-if="googleMessage" class="text-sm text-slate-500">{{ googleMessage }}</p>
+        <p v-if="googleMessage" class="text-sm text-slate-500">{{ t(googleMessage) }}</p>
       </div>
     </section>
   </main>

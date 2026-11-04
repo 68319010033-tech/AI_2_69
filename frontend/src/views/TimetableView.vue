@@ -1,4 +1,5 @@
 <script setup>
+import { t as tr } from '@/i18n'
 import { ref, computed, watch, onMounted } from 'vue'
 import { toPng } from 'html-to-image'
 import { useRouter } from 'vue-router'
@@ -71,13 +72,13 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
 
 <template>
     <div class="mx-auto max-w-5xl p-6 md:p-10">
-        <h1 class="text-2xl font-bold text-primary-700">④ ดูตารางสอน</h1>
-        <p class="mt-1 text-slate-500">เลือกมุมมองและรายการที่ต้องการดู</p>
+        <h1 class="text-2xl font-bold text-primary-700"> {{ tr("④ ดูตารางสอน") }} </h1>
+        <p class="mt-1 text-slate-500"> {{ tr("เลือกมุมมองและรายการที่ต้องการดู") }} </p>
 
         <div v-if="store.scheduleLoading"
             class="mt-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <span class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-            <span class="text-slate-600">กำลังโหลดตาราง…</span>
+            <span class="text-slate-600"> {{ tr("กำลังโหลดตาราง…") }} </span>
         </div>
 
         <template v-else>
@@ -85,7 +86,7 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
                 <div class="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
                     <button v-for="t in tabs" :key="t.k" class="rounded-lg px-4 py-1.5 text-sm transition"
                         :class="mode === t.k ? 'bg-primary-600 font-semibold text-white' : 'text-slate-600 hover:bg-primary-50'"
-                        @click="mode = t.k">{{ t.l }}</button>
+                        @click="mode = t.k">{{ tr(t.l) }}</button>
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -93,7 +94,7 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
                         <button v-for="l in [{ k: 'color', t: '🎨 สีสัน' }, { k: 'formal', t: '📋 ทางการ' }]" :key="l.k"
                             class="rounded-lg px-3 py-1.5 text-sm transition"
                             :class="look === l.k ? 'bg-primary-600 font-semibold text-white' : 'text-slate-600 hover:bg-primary-50'"
-                            @click="look = l.k">{{ l.t }}</button>
+                            @click="look = l.k">{{ tr(l.t) }}</button>
                     </div>
                     <select v-model="selected"
                         class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none">
@@ -101,20 +102,19 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
                     </select>
                     <button
                         class="rounded-lg border border-primary-500 px-3 py-1.5 text-sm text-primary-700 hover:bg-primary-50"
-                        @click="download">⬇ ดาวน์โหลดรูป</button>
+                        @click="download"> {{ tr("⬇ ดาวน์โหลดรูป") }} </button>
                 </div>
             </div>
 
             <p class="mt-3 text-sm text-slate-500">
-                {{ sessions.length }} รายการ · {{ totalPeriods }} คาบ/สัปดาห์
-            </p>
+                {{ sessions.length }} {{ tr("รายการ ·") }} {{ totalPeriods }} {{ tr("คาบ/สัปดาห์") }} </p>
 
             <div class="mt-3 overflow-x-auto pb-8">
                 <div ref="sheet" class="min-w-[900px] rounded-2xl bg-white p-5">
                      <div v-if="look === 'color'" class="mb-3 flex items-center justify-between">
-                        <div class="text-2xl font-bold text-primary-700">ตารางเรียน</div>
+                        <div class="text-2xl font-bold text-primary-700"> {{ tr("ตารางเรียน") }} </div>
                         <div class="rounded-full border-2 border-primary-500 px-5 py-1 font-semibold text-primary-700">
-                            {{ modeLabel }}: {{ optionLabel(selected) }}
+                            {{ tr(modeLabel) }}: {{ optionLabel(selected) }}
                         </div>
                     </div>
             <TimetableGrid v-if="look === 'color'" :sessions="sessions" :mode="mode" :colors="colors" />
@@ -123,10 +123,10 @@ onMounted(() => { if (!store.schedule.length) store.loadSchedule() })
             </div>
 
             <div class="mt-6 flex items-center justify-between">
-                <RouterLink to="/generate" class="text-slate-500 hover:text-primary-700">← กลับ</RouterLink>
+                <RouterLink to="/generate" class="text-slate-500 hover:text-primary-700"> {{ tr("← กลับ") }} </RouterLink>
                 <button
                     class="rounded-lg bg-primary-600 px-6 py-2.5 font-semibold text-white transition hover:bg-primary-700"
-                    @click="router.push('/export')">ถัดไป: ส่งออกผลลัพธ์ →</button>
+                    @click="router.push('/export')"> {{ tr("ถัดไป: ส่งออกผลลัพธ์ →") }} </button>
             </div>
         </template>
     </div>

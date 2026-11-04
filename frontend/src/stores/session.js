@@ -37,6 +37,7 @@ export const useSessionStore = defineStore('session', () => {
     const startedAt = ref(0)
     let timer = null
     const issues = ref([])
+    const reviewIssues = ref([])
     const log = ref([])
     const stats = ref(null)
     const validating = ref(false)
@@ -52,7 +53,7 @@ export const useSessionStore = defineStore('session', () => {
     const maxStep = computed(() => {
         if (generated.value) return 5
         if (validated.value) return 3
-        if (sessionId.value) return 2
+        if (sessionId.value || canNext.value) return 2
         return 1
     })
 
@@ -64,7 +65,7 @@ export const useSessionStore = defineStore('session', () => {
             const data = Object.fromEntries(Object.entries(files.value).map(([name, entry]) =>
                 [name, { headers: entry.headers, data: entry.data, rows: entry.data.length }]))
             localStorage.setItem(key, JSON.stringify({ version: 1, files: data, sessionId: sessionId.value,
-                sourceSessionId: sourceSessionId.value, revision: serverRevision.value, dirty: dirty.value }))
+                sourceSessionId: sourceSessionId.value, revision: serverRevision.value, dirty: dirty.value, reviewIssues: reviewIssues.value }))
             draftStatus.value = 'บันทึกฉบับร่างในเครื่องแล้ว'
         } catch {
             draftStatus.value = 'บันทึกฉบับร่างไม่ได้ พื้นที่อาจเต็ม กรุณาอย่าเพิ่งปิดหรือรีเฟรชหน้า'
@@ -75,6 +76,7 @@ export const useSessionStore = defineStore('session', () => {
         stopPolling()
         invalidateResults(false)
         files.value = {}
+        reviewIssues.value = []
         sourceSessionId.value = ''
         serverRevision.value = ''
         dirty.value = false
@@ -94,6 +96,7 @@ export const useSessionStore = defineStore('session', () => {
             files.value = saved.files
             for (const entry of Object.values(files.value)) entry.rows = entry.data.length
             dirty.value = saved.dirty === true
+            reviewIssues.value = Array.isArray(saved.reviewIssues) ? saved.reviewIssues.filter(issue => issue && typeof issue.file === 'string') : []
             sessionId.value = dirty.value ? '' : saved.sessionId || ''
             sourceSessionId.value = saved.sourceSessionId || ''
             serverRevision.value = saved.revision || ''
@@ -124,6 +127,7 @@ export const useSessionStore = defineStore('session', () => {
             }
             invalidateResults(false)
             files.value = latest.files
+            reviewIssues.value = []
             sessionId.value = latest.sessionId
             sourceSessionId.value = latest.sessionId
             serverRevision.value = latest.revision
@@ -154,6 +158,7 @@ export const useSessionStore = defineStore('session', () => {
             if (!headers.length) throw new Error(`${name}: ไม่พบหัวตาราง`)
             invalidateResults()
             files.value[name] = { file: f, rows: data.length, headers, data }
+            clearFileIssues(name)
             saveDraft()
         }
         } catch (e) {
@@ -167,6 +172,7 @@ export const useSessionStore = defineStore('session', () => {
         if (editingLocked.value || !REQUIRED_FILES.includes(name)) return false
         invalidateResults()
         files.value[name] = { headers: [...headers], data: data.map(row => [...row]), rows: data.length }
+        clearFileIssues(name)
         saveDraft()
         return true
     }
@@ -175,6 +181,7 @@ export const useSessionStore = defineStore('session', () => {
         if (editingLocked.value) return
         invalidateResults()
         delete files.value[name]
+        clearFileIssues(name)
         saveDraft()
     }
 
@@ -217,6 +224,22 @@ export const useSessionStore = defineStore('session', () => {
         const entry = files.value[name]
         entry.data.splice(row, 1)
         entry.rows = entry.data.length
+        const file = name.replace(/\.csv$/, '')
+        reviewIssues.value = reviewIssues.value.filter(issue => issue.file !== file || issue.rowIndex !== row)
+            .map(issue => issue.file === file && issue.rowIndex > row ? { ...issue, rowIndex: issue.rowIndex - 1 } : issue)
+        saveDraft()
+    }
+
+    function clearFileIssues(name) {
+        reviewIssues.value = reviewIssues.value.filter(issue => `${issue.file}.csv` !== name)
+    }
+
+    function addColumn(name, column) {
+        const entry = files.value[name]
+        if (editingLocked.value || !entry || entry.headers.includes(column)) return
+        invalidateResults()
+        entry.headers.push(column)
+        entry.data.forEach(row => row.push(''))
         saveDraft()
     }
 
@@ -252,16 +275,22 @@ export const useSessionStore = defineStore('session', () => {
 
 
     async function validate() {
+        if (!sessionId.value || editingLocked.value) return false
         validating.value = true
+        validated.value = false
         validateError.value = ''
         try {
             const res = await api.validate(sessionId.value)
             issues.value = res.issues
+            reviewIssues.value = res.issues
             log.value = res.log
             stats.value = res.stats
             validated.value = res.canGenerate ?? res.issues.every((i) => i.severity !== 'error')
+            saveDraft()
+            return true
         } catch (e) {
             validateError.value = e.response?.data?.message || 'ตรวจสอบข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง'
+            return false
         } finally {
             validating.value = false
         }
@@ -329,7 +358,7 @@ export const useSessionStore = defineStore('session', () => {
 
     return {
         sessionId, files, uploading, reading, editingLocked, error, validated, generated, maxStep, missing, ready, canNext, addFiles, removeFile, upload,
-        updateCell, addRow, removeRow, setTable,
+        updateCell, addRow, removeRow, setTable, addColumn, reviewIssues,
         dirty, draftStatus, refreshStatus, remoteAvailable, refreshLatest,
         issues, log, stats, validating, validateError, errorCount, warnCount, validate, schedule, scheduleLoading, loadSchedule,
         lists, method, job, generating, generateError, startedAt, startGenerate, cancelGenerate

@@ -1,4 +1,5 @@
 <script setup>
+import { t as tr } from '@/i18n'
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '@/api'
 import { useSessionStore } from '@/stores/session'
@@ -75,50 +76,45 @@ function importMapped() {
 
 <template>
     <section class="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 class="font-semibold text-primary-700">กรอกข้อมูลเอง / นำเข้าไฟล์รูปแบบอื่น</h2>
-        <p class="mt-1 text-sm text-slate-500">แบบฟอร์มตาม DATA_CSV ทั้ง 10 ประเภท เลือกประเภทแล้วสร้างตารางว่าง หรือจับคู่คอลัมน์จากไฟล์ของคุณ</p>
+        <h2 class="font-semibold text-primary-700"> {{ tr("กรอกข้อมูลเอง / นำเข้าไฟล์รูปแบบอื่น") }} </h2>
+        <p class="mt-1 text-sm text-slate-500"> {{ tr("แบบฟอร์มตาม DATA_CSV ทั้ง 10 ประเภท เลือกประเภทแล้วสร้างตารางว่าง หรือจับคู่คอลัมน์จากไฟล์ของคุณ") }} </p>
         <div class="mt-3 flex flex-wrap items-center gap-3">
-            <label class="text-sm">ประเภทข้อมูล
-                <select v-model="type" :disabled="busy" class="ml-2 rounded border border-slate-300 p-2">
-                    <option value="">— เลือกประเภทข้อมูล —</option>
-                    <option v-for="(_, name) in schema" :key="name" :value="name">{{ FILE_LABELS[name] }} ({{ name }}.csv)</option>
+            <label class="text-sm"> {{ tr("ประเภทข้อมูล") }} <select v-model="type" :disabled="busy" class="ml-2 rounded border border-slate-300 p-2">
+                    <option value=""> {{ tr("— เลือกประเภทข้อมูล —") }} </option>
+                    <option v-for="(_, name) in schema" :key="name" :value="name">{{ tr(FILE_LABELS[name]) }} ({{ name }} {{ tr(".csv)") }} </option>
                 </select>
             </label>
             <button class="rounded border border-primary-500 px-3 py-2 text-sm text-primary-700 disabled:opacity-40"
-                :disabled="!spec || busy || !canReplace" @click="createTable">สร้างตารางว่าง</button>
-            <label class="text-sm">นำเข้าไฟล์รูปแบบอื่น
-                <input type="file" accept=".csv,.tsv,.txt" :disabled="!Object.keys(schema).length || busy" class="ml-2 max-w-64" @change="readOther" />
+                :disabled="!spec || busy || !canReplace" @click="createTable"> {{ tr("สร้างตารางว่าง") }} </button>
+            <label class="text-sm"> {{ tr("นำเข้าไฟล์รูปแบบอื่น") }} <input type="file" accept=".csv,.tsv,.txt" :disabled="!Object.keys(schema).length || busy" class="ml-2 max-w-64" @change="readOther" />
             </label>
         </div>
-        <p class="mt-2 text-xs text-slate-500">รองรับ UTF-8 คั่นด้วยจุลภาค เซมิโคลอน หรือแท็บ • ZIP ให้แตกไฟล์ก่อน • Excel ให้บันทึกเป็น CSV UTF-8</p>
-        <p v-if="type === 'timeslots' || type === 'shared_students'" class="mt-2 text-xs text-slate-500">
-            เวลาเริ่ม/สิ้นสุดและจำนวนนักเรียนร่วมเก็บเป็นข้อมูลประกอบ การจัดตารางยังใช้วันและหมายเลขคาบ และห้ามกลุ่มที่มีนักเรียนร่วมเรียนทับกัน
-        </p>
+        <p class="mt-2 text-xs text-slate-500"> {{ tr("รองรับ UTF-8 คั่นด้วยจุลภาค เซมิโคลอน หรือแท็บ • ZIP ให้แตกไฟล์ก่อน • Excel ให้บันทึกเป็น CSV UTF-8") }} </p>
+        <p v-if="type === 'timeslots' || type === 'shared_students'" class="mt-2 text-xs text-slate-500"> {{ tr("เวลาเริ่ม/สิ้นสุดและจำนวนนักเรียนร่วมเก็บเป็นข้อมูลประกอบ การจัดตารางยังใช้วันและหมายเลขคาบ และห้ามกลุ่มที่มีนักเรียนร่วมเรียนทับกัน") }} </p>
         <label v-if="store.files[target]" class="mt-3 block text-sm text-amber-700">
-            <input v-model="replace" type="checkbox" :disabled="busy" /> ยืนยันแทนที่ข้อมูลเดิมใน {{ target }} ด้วยตารางที่จะสร้างหรือนำเข้า
-        </label>
+            <input v-model="replace" type="checkbox" :disabled="busy" /> {{ tr("ยืนยันแทนที่ข้อมูลเดิมใน") }} {{ target }} {{ tr("ด้วยตารางที่จะสร้างหรือนำเข้า") }} </label>
         <div v-if="source" class="mt-3 text-sm" role="status">
             <p>{{ detection }}</p>
-            <p v-if="!spec" class="mt-1 text-amber-700">ไฟล์ {{ sourceName }} รอเลือกประเภทข้อมูลด้านบน</p>
+            <p v-if="!spec" class="mt-1 text-amber-700"> {{ tr("ไฟล์") }} {{ sourceName }} {{ tr("รอเลือกประเภทข้อมูลด้านบน") }} </p>
         </div>
         <div v-if="source && spec" class="mt-4 border-t border-slate-200 pt-3">
-            <h3 class="font-medium">จับคู่คอลัมน์: {{ sourceName }} → {{ target }} ({{ source.data.length }} แถว)</h3>
-            <p class="mt-1 text-sm text-slate-500">* ต้องมีข้อมูล • ตรวจตัวอย่างก่อนยืนยัน คอลัมน์ที่ไม่จับคู่จะเก็บไว้เป็นข้อมูลเพิ่มเติม</p>
+            <h3 class="font-medium"> {{ tr("จับคู่คอลัมน์:") }} {{ sourceName }} → {{ target }} ({{ source.data.length }} {{ tr("แถว)") }} </h3>
+            <p class="mt-1 text-sm text-slate-500"> {{ tr("* ต้องมีข้อมูล • ตรวจตัวอย่างก่อนยืนยัน คอลัมน์ที่ไม่จับคู่จะเก็บไว้เป็นข้อมูลเพิ่มเติม") }} </p>
             <div class="mt-3 grid gap-3 sm:grid-cols-2">
                 <label v-for="(definition, column) in spec.cols" :key="column" class="text-sm">
-                    {{ COLUMN_LABELS[column] || column }} {{ definition.required ? '*' : '(ไม่บังคับ)' }}
+                    {{ tr(COLUMN_LABELS[column] || column) }} {{ definition.required ? '*' : tr('(ไม่บังคับ)') }}
                     <span class="block text-xs text-slate-400">{{ templateHeader(type, column) }}</span>
                     <select v-model="mapping[column]" :disabled="busy" class="mt-1 w-full rounded border border-slate-300 p-2">
-                        <option :value="-1">— เลือกคอลัมน์ —</option>
+                        <option :value="-1"> {{ tr("— เลือกคอลัมน์ —") }} </option>
                         <option v-for="(header, index) in source.headers" :key="index" :value="index">
-                            {{ header }} · {{ source.data[0]?.[index] || '(ว่าง)' }}
+                            {{ header }} · {{ source.data[0]?.[index] || tr('(ว่าง)') }}
                         </option>
                     </select>
                 </label>
             </div>
-            <p v-if="preview.error" class="mt-3 text-sm text-amber-700" role="status">{{ preview.error }}</p>
+            <p v-if="preview.error" class="mt-3 text-sm text-amber-700" role="status">{{ tr(preview.error) }}</p>
             <div v-else class="mt-4 overflow-x-auto">
-                <p class="mb-2 text-sm font-medium">ตัวอย่างหลังจับคู่ (สูงสุด 5 แถว) — ยังไม่แทนที่ข้อมูลเดิมจนกว่าจะยืนยัน</p>
+                <p class="mb-2 text-sm font-medium"> {{ tr("ตัวอย่างหลังจับคู่ (สูงสุด 5 แถว) — ยังไม่แทนที่ข้อมูลเดิมจนกว่าจะยืนยัน") }} </p>
                 <table class="w-full text-left text-sm">
                     <thead class="bg-primary-50"><tr><th v-for="header in preview.headers" :key="header" class="whitespace-nowrap px-3 py-2">{{ header }}</th></tr></thead>
                     <tbody><tr v-for="(row, index) in preview.data" :key="index" class="border-b border-slate-100">
@@ -127,12 +123,12 @@ function importMapped() {
                 </table>
             </div>
             <div class="mt-3 flex gap-3">
-                <button class="rounded bg-primary-600 px-4 py-2 text-sm text-white disabled:opacity-40" :disabled="busy || !canReplace || !!preview.error" @click="importMapped">ยืนยันนำเข้าตาราง</button>
-                <button class="text-sm text-slate-500" :disabled="busy" @click="source = null">ยกเลิก</button>
+                <button class="rounded bg-primary-600 px-4 py-2 text-sm text-white disabled:opacity-40" :disabled="busy || !canReplace || !!preview.error" @click="importMapped"> {{ tr("ยืนยันนำเข้าตาราง") }} </button>
+                <button class="text-sm text-slate-500" :disabled="busy" @click="source = null"> {{ tr("ยกเลิก") }} </button>
             </div>
         </div>
-        <p v-if="error" role="alert" class="mt-3 text-sm text-red-600">{{ error }}
-            <button v-if="!spec" class="ml-2 underline" @click="loadSchema">ลองใหม่</button>
+        <p v-if="error" role="alert" class="mt-3 text-sm text-red-600">{{ tr(error) }}
+            <button v-if="!spec" class="ml-2 underline" @click="loadSchema"> {{ tr("ลองใหม่") }} </button>
         </p>
     </section>
 </template>

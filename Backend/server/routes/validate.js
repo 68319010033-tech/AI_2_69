@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../lib/db');
-const { cleanFile } = require('../lib/clean');
+const { cleanFile, resolveColumns } = require('../lib/clean');
 const { validate } = require('../lib/validate');
 const { FILES, FILE_NAMES } = require('../lib/schema');
 
@@ -25,6 +25,17 @@ router.post('/validate', ah(async (req, res) => {
   issues.push(...v.issues);
   const order = { error: 0, warning: 1, info: 2 };
   issues.sort((a, b) => order[a.severity] - order[b.severity]);
+  // Identify the original editable cell, including aliases and multiline CSV records.
+  for (const issue of issues) {
+    const source = raw[issue.file];
+    if (!source || !FILES[issue.file]) continue;
+    const headers = db.arr(source.headers);
+    const { map } = resolveColumns(FILES[issue.file], headers);
+    issue.rowIndex = issue.row == null ? null : db.arr(source.rows).findIndex(row => row._row === issue.row);
+    issue.columnIndices = String(issue.column || '').split('+')
+      .map(column => headers.findIndex(header => header.key === map[column]))
+      .filter(index => index >= 0);
+  }
   const errors = issues.filter((i) => i.severity === 'error').length;
   const canGenerate = errors === 0;
 

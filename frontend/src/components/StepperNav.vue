@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
+import { t } from '@/i18n'
 
 const route = useRoute()
 const store = useSessionStore()
@@ -52,9 +53,9 @@ const state = (n) =>
       </span>
       <span class="hidden md:block">
         <span class="block font-semibold" :class="state(s.n) === 'current' ? 'text-primary-700' : 'text-slate-800'">
-          {{ s.title }}
+          {{ t(s.title) }}
         </span>
-        <span class="block text-sm text-slate-500">{{ s.desc }}</span>
+        <span class="block text-sm text-slate-500">{{ t(s.desc) }}</span>
       </span>
     </component>
   </nav>
