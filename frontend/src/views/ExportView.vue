@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useSessionStore, REQUIRED_FILES } from '@/stores/session'
 import { api } from '@/api'
+import { loadExportData, buildXlsxBlob, printPdf, downloadBlob } from '@/utils/exportSchedule'
 
 const store = useSessionStore()
 const sid = computed(() => store.sessionId)
@@ -29,6 +30,25 @@ const METRIC_LABELS = {
 const report = ref(null)
 const loading = ref(false)
 const error = ref('')
+
+const exporting = ref('') // '' | 'xlsx' | 'pdf'
+const exportError = ref('')
+const XLSX_DESC = 'ตารางรายกลุ่ม ครู ห้อง (Excel)'
+const PDF_DESC = 'เปิดหน้าต่างพิมพ์ แล้วเลือก "บันทึกเป็น PDF"'
+
+async function exportTable(kind) {
+  exporting.value = kind
+  exportError.value = ''
+  try {
+    const sessions = await loadExportData(api, sid.value)
+    if (kind === 'xlsx') downloadBlob(await buildXlsxBlob(sessions), 'timetable.xlsx')
+    else printPdf(sessions, 'ตารางเรียน')
+  } catch (e) {
+    exportError.value = 'สร้างไฟล์ไม่สำเร็จ: ' + e.message
+  } finally {
+    exporting.value = ''
+  }
+}
 
 async function load() {
   loading.value = true
@@ -64,50 +84,56 @@ const metrics = computed(() =>
 
     <div v-if="!sid" class="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
       <p class="text-slate-600">ยังไม่มีผลลัพธ์ให้ส่งออก</p>
-      <RouterLink to="/upload" class="mt-3 inline-block font-semibold text-primary-600 hover:underline">← เริ่มจากอัปโหลด</RouterLink>
+      <RouterLink to="/upload" class="mt-3 inline-block font-semibold text-primary-600 hover:underline">←
+        เริ่มจากอัปโหลด</RouterLink>
     </div>
 
     <template v-else>
       <!-- ดาวน์โหลด -->
       <div class="mt-6 grid gap-4 md:grid-cols-3">
-        <a
-          :href="api.solutionUrl(sid)" @click.prevent="api.download(api.solutionUrl(sid))"
-          download="solution.csv"
-          class="rounded-xl bg-primary-600 p-5 text-white shadow-sm transition hover:bg-primary-700"
-        >
+        <a :href="api.solutionUrl(sid)" @click.prevent="api.download(api.solutionUrl(sid))" download="solution.csv"
+          class="rounded-xl bg-primary-600 p-5 text-white shadow-sm transition hover:bg-primary-700">
           <div class="text-3xl">⬇</div>
           <div class="mt-2 text-lg font-bold">solution.csv</div>
           <div class="text-sm opacity-90">ไฟล์คำตอบที่ส่งตรวจ (UTF-8 BOM)</div>
         </a>
-        <a
-          :href="api.reportUrl(sid)" @click.prevent="api.download(api.reportUrl(sid))"
-          download="report.md"
-          class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50"
-        >
+        <a :href="api.reportUrl(sid)" @click.prevent="api.download(api.reportUrl(sid))" download="report.md"
+          class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50">
           <div class="text-3xl">📄</div>
           <div class="mt-2 text-lg font-bold">report.md</div>
           <div class="text-sm text-slate-500">รายงานสำหรับผู้ใช้งาน</div>
         </a>
-        <a
-          :href="api.cleaningLogUrl(sid)" @click.prevent="api.download(api.cleaningLogUrl(sid))"
+        <a :href="api.cleaningLogUrl(sid)" @click.prevent="api.download(api.cleaningLogUrl(sid))"
           download="cleaning-log"
-          class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50"
-        >
+          class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-primary-500 hover:bg-primary-50">
           <div class="text-3xl">🔧</div>
           <div class="mt-2 text-lg font-bold">cleaning log</div>
           <div class="text-sm text-slate-500">บันทึกสิ่งที่แก้ในข้อมูลดิบ</div>
         </a>
+
+        <button type="button" :disabled="!!exporting" @click="exportTable('xlsx')"
+          class="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-primary-500 hover:bg-primary-50 disabled:opacity-60">
+          <div class="text-3xl">📊</div>
+          <div class="mt-2 text-lg font-bold">timetable.xlsx</div>
+          <div class="text-sm text-slate-500">{{ exporting === 'xlsx' ? 'กำลังสร้างไฟล์…' : XLSX_DESC }}</div>
+        </button>
+        <button type="button" :disabled="!!exporting" @click="exportTable('pdf')"
+          class="rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-primary-500 hover:bg-primary-50 disabled:opacity-60">
+          <div class="text-3xl">🖨</div>
+          <div class="mt-2 text-lg font-bold">timetable.pdf</div>
+         <div class="text-sm text-slate-500">{{ exporting === 'pdf' ? 'กำลังเตรียม…' : PDF_DESC }}</div>
+        </button>
+
       </div>
 
+      <p v-if="exportError" class="mt-3 text-err">❌ {{ exportError }}</p>
       <!-- ผลตรวจ 12 ข้อ -->
       <div class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-200 p-4">
           <h2 class="font-semibold">ผลตรวจเงื่อนไขบังคับ (Hard Constraints)</h2>
-          <span
-            v-if="report"
-            class="rounded-full px-3 py-1 text-sm font-semibold"
-            :class="allPass ? 'bg-primary-100 text-ok' : 'bg-red-50 text-err'"
-          >{{ allPass ? '✅ ผ่านครบ 12/12' : `❌ ผ่าน ${passCount}/12` }}</span>
+          <span v-if="report" class="rounded-full px-3 py-1 text-sm font-semibold"
+            :class="allPass ? 'bg-primary-100 text-ok' : 'bg-red-50 text-err'">{{ allPass ? '✅ ผ่านครบ 12/12' : `❌ ผ่าน
+            ${passCount}/12` }}</span>
         </div>
 
         <div v-if="loading" class="flex items-center gap-3 p-6 text-slate-600">
@@ -142,13 +168,9 @@ const metrics = computed(() =>
       <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 class="mb-2 font-semibold">ไฟล์ข้อมูลที่ทำความสะอาดแล้ว</h2>
         <div class="flex flex-wrap gap-2 text-sm">
-          <a
-            v-for="f in REQUIRED_FILES"
-            :key="f"
-            :href="api.cleanedUrl(sid, f)" @click.prevent="api.download(api.cleanedUrl(sid, f))"
-            download
-            class="rounded-lg border border-primary-500 px-2.5 py-1 text-primary-700 hover:bg-primary-50"
-          >⬇ {{ f }}</a>
+          <a v-for="f in REQUIRED_FILES" :key="f" :href="api.cleanedUrl(sid, f)"
+            @click.prevent="api.download(api.cleanedUrl(sid, f))" download
+            class="rounded-lg border border-primary-500 px-2.5 py-1 text-primary-700 hover:bg-primary-50">⬇ {{ f }}</a>
         </div>
       </div>
 
@@ -156,5 +178,7 @@ const metrics = computed(() =>
         <RouterLink to="/timetable" class="text-slate-500 hover:text-primary-700">← กลับไปดูตาราง</RouterLink>
       </div>
     </template>
+
+
   </div>
 </template>
