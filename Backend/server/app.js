@@ -47,7 +47,7 @@ for (const route of ['upload', 'validate', 'datasets', 'generate', 'schedule']) 
 app.use('/api', (req, res) => res.status(404).json({ message: 'Not found' }));
 app.use((err, req, res, next) => {
   const status = err.status || (err.name === 'MulterError' ? 400 : 500);
-  if (status >= 500) console.error('[request failed]', err.name);
+  if (status >= 500) console.error('[request failed]', err.name, err.code, err.message);
   res.status(status).json({ message: status >= 500 ? 'Service unavailable. Try again later.' : err.message });
 });
 const dist = path.resolve(__dirname, '../../frontend/dist');

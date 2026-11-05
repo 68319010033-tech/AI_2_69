@@ -22,6 +22,7 @@ async function issueOtp(id, purpose) {
   if (!result.committed) return;
   try { await mail.sendOtp(result.value.email, code, purpose); }
   catch (e) {
+    console.error('[mail]', e.code, e.message);
     await db.transaction(a.accountPath(id), u => {
       if (u?.otps?.[purpose]?.nonce !== nonce) return;
       delete u.otps[purpose];
