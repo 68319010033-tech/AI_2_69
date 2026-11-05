@@ -68,6 +68,7 @@ export const useSessionStore = defineStore('session', () => {
     const scheduleLoading = ref(false)
     const job = ref(null)
     const generating = ref(false)
+    const cancelling = ref(false)
     const generateError = ref('')
     const startedAt = ref(0)
     let timer = null
@@ -382,6 +383,7 @@ export const useSessionStore = defineStore('session', () => {
             if (j.status !== 'running') {
                 stopPolling()
                 generating.value = false
+                cancelling.value = false
                 if (j.status === 'done' && j.valid !== false) {
                     lastGeneratedAt.value = new Date().toISOString()
                     saveDraft()
@@ -392,6 +394,7 @@ export const useSessionStore = defineStore('session', () => {
         } catch {
             stopPolling()
             generating.value = false
+            cancelling.value = false
             generateError.value = 'ติดต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง'
         }
     }
@@ -400,6 +403,7 @@ export const useSessionStore = defineStore('session', () => {
         if (editingLocked.value || !selectedDataset.value?.id) return
         stopPolling()
         generating.value = true
+        cancelling.value = false
         generateError.value = ''
         generated.value = false
         job.value = { status: 'running' }
@@ -418,11 +422,19 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     async function cancelGenerate() {
-        if (!job.value?.jobId) return
+        const jobId = job.value?.jobId
+        if (!jobId || cancelling.value) return
+        cancelling.value = true
         try {
-            await api.cancelJob(job.value.jobId)
-            await poll(job.value.jobId)
-        } catch { generateError.value = 'Unable to cancel. Please retry.' }
+            await api.cancelJob(jobId)
+        } catch (e) {
+            // 409 = งานจบไปแล้ว ให้ poll ดึงสถานะจริงแทนการขึ้น error
+            if (e.response?.status !== 409) {
+                cancelling.value = false
+                generateError.value = 'ยกเลิกไม่สำเร็จ ลองใหม่อีกครั้ง'
+            }
+        }
+        await poll(jobId) // ถ้ายังไม่หยุด timer จะ poll ต่อจนเห็นสถานะ cancelled
     }
 
     return {
@@ -432,6 +444,6 @@ export const useSessionStore = defineStore('session', () => {
         updateCell, addRow, removeRow, setTable, addColumn, reviewIssues,
         dirty, draftStatus, refreshStatus, remoteAvailable, refreshLatest,
         issues, log, stats, validating, validateError, errorCount, warnCount, validate, schedule, scheduleLoading, loadSchedule,
-        lists, method, job, generating, generateError, startedAt, startGenerate, cancelGenerate
+        lists, method, job, generating, cancelling, generateError, startedAt, startGenerate, cancelGenerate
     }
 })

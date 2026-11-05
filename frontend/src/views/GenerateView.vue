@@ -181,7 +181,17 @@ const chart = computed(() => {
         </div>
         <div class="mt-1 flex justify-between text-xs text-slate-400">
           <span>{{ t("Elapsed time / budget (not completion percentage)") }} · {{ timeLimit }}s</span>
-          <button class="text-slate-500 underline hover:text-err" @click="store.cancelGenerate()"> {{ t("ยกเลิก") }} </button>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+          <button
+            class="inline-flex items-center gap-1.5 rounded-lg border border-err px-5 py-2 text-sm font-semibold text-err transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-err disabled:cursor-not-allowed disabled:opacity-60"
+            :disabled="store.cancelling || !job?.jobId"
+            @click="store.cancelGenerate()"
+          >
+            <span v-if="store.cancelling" class="h-4 w-4 animate-spin rounded-full border-2 border-err border-t-transparent motion-reduce:animate-none" />
+            {{ store.cancelling ? t('กำลังยกเลิก…', 'Cancelling…') : t('⏹ ยกเลิกการจัดตาราง', '⏹ Cancel scheduling') }}
+          </button>
         </div>
 
         <!-- ตัวเลขสรุป -->
