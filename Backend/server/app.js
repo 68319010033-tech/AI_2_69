@@ -43,7 +43,7 @@ app.use('/api', async (req, res, next) => {
     next();
   } catch (e) { next(e); }
 });
-for (const route of ['upload', 'validate', 'datasets', 'generate', 'schedule']) app.use('/api', require(`./routes/${route}`));
+for (const route of ['upload', 'validate', 'datasets', 'generate', 'schedule', 'timetables']) app.use('/api', require(`./routes/${route}`));
 app.use('/api', (req, res) => res.status(404).json({ message: 'Not found' }));
 app.use((err, req, res, next) => {
   const status = err.status || (err.name === 'MulterError' ? 400 : 500);

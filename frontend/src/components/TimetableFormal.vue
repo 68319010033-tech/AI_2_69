@@ -1,5 +1,5 @@
 <script setup>
-import { t as copy } from '@/i18n'
+import { t as copy, locale } from '@/i18n'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -66,7 +66,7 @@ function lines(s) {
 
     <tbody>
       <tr v-for="d in DAYS" :key="d.k" class="h-28">
-        <td class="text-center text-2xl font-bold">{{ copy(d.l) }}</td>
+        <td class="px-1 text-center font-bold [overflow-wrap:anywhere]" :class="locale === 'en' ? 'text-base' : 'text-2xl'">{{ copy(d.l) }}</td>
 
         <template v-for="c in COLS" :key="c">
           <td v-if="c === 'L'" class="text-center text-lg font-semibold"> {{ copy("พัก") }} </td>

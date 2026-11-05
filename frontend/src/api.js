@@ -91,6 +91,10 @@ export const api = {
         }
         return normSchedule((await http.get(`/schedule/${sessionId}`, { params: { method } })).data)
     },
+    async timetables() { return (await http.get('/timetables')).data.timetables },
+    async saveTimetable(sessionId, name, method) { return (await http.post('/timetables', { sessionId, name, method })).data.timetable },
+    async loadTimetable(id) { return (await http.post(`/timetables/${id}/load`)).data },
+    async deleteTimetable(id) { return (await http.delete(`/timetables/${id}`)).data },
     async validate(sessionId) {
         if (MOCK) {
             await sleep(1000)

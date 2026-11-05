@@ -5,6 +5,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { toPng } from 'html-to-image'
 import { useRouter } from 'vue-router'
 import SessionDetails from '@/components/SessionDetails.vue'
+import SavedTimetables from '@/components/SavedTimetables.vue'
 import TimetableGrid from '@/components/TimetableGrid.vue'
 import TimetableFormal from '@/components/TimetableFormal.vue'
 import { useSessionStore } from '@/stores/session'
@@ -88,6 +89,8 @@ onMounted(() => { if (!store.schedule.length && store.generationSessionId) store
     <div class="mx-auto max-w-5xl p-6 md:p-10">
         <h1 class="text-2xl font-bold text-primary-700"> {{ tr("④ ดูตารางสอน") }} </h1>
         <p class="mt-1 text-slate-500"> {{ tr("เลือกมุมมองและรายการที่ต้องการดู") }} </p>
+
+        <SavedTimetables />
 
         <div v-if="store.scheduleLoading"
             class="mt-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
