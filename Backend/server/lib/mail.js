@@ -3,6 +3,16 @@ let transport;
 async function sendOtp(email, code, purpose) {
   const subject = 'Your Phu Pha Campus verification code';
   const text = `Your ${purpose} code is ${code}. It expires in 10 minutes and can be used once. If you did not request this, ignore this email.`;
+  if (process.env.BREVO_API_KEY) {
+    if (!process.env.MAIL_FROM) throw new Error('Configure a verified sender in MAIL_FROM');
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST', signal: AbortSignal.timeout(12000),
+      headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { email: process.env.MAIL_FROM, name: 'Phu Pha Campus' }, to: [{ email }], subject, textContent: text }),
+    });
+    if (!response.ok) throw new Error(`Brevo rejected the message (${response.status})`);
+    return;
+  }
   if (process.env.RESEND_API_KEY) {
     if (!process.env.MAIL_FROM) throw new Error('Configure a verified sender in MAIL_FROM');
     const response = await fetch('https://api.resend.com/emails', {
