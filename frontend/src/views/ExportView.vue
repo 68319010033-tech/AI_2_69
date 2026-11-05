@@ -1,5 +1,5 @@
 <script setup>
-import { t as tr } from '@/i18n'
+import { t as tr, message } from '@/i18n'
 import { ref, computed, onMounted } from 'vue'
 import { useSessionStore, REQUIRED_FILES } from '@/stores/session'
 import { api } from '@/api'
@@ -44,7 +44,7 @@ async function dl(url) {
   try {
     await api.download(url)
   } catch (e) {
-    exportError.value = 'ดาวน์โหลดไม่สำเร็จ: ' + (e?.message || 'ลองใหม่อีกครั้ง')
+    exportError.value = tr('ดาวน์โหลดไม่สำเร็จ') + ': ' + (e?.message || tr('ลองใหม่อีกครั้ง'))
   }
 }
 
@@ -55,7 +55,7 @@ async function exportXlsx() {
     const sessions = await loadExportData(api, sid.value)
     downloadBlob(await buildXlsxBlob(sessions), 'timetable.xlsx')
   } catch (e) {
-    exportError.value = 'สร้างไฟล์ไม่สำเร็จ: ' + e.message
+    exportError.value = tr('สร้างไฟล์ไม่สำเร็จ') + ': ' + e.message
   } finally {
     exporting.value = ''
   }
@@ -74,7 +74,7 @@ async function openPdf() {
   try {
     pdfSessions.value = await loadExportData(api, sid.value)
   } catch (e) {
-    pdfError.value = 'โหลดข้อมูลตารางไม่สำเร็จ: ' + e.message
+    pdfError.value = tr('โหลดข้อมูลตารางไม่สำเร็จ') + ': ' + e.message
   } finally {
     pdfLoading.value = false
   }
@@ -170,13 +170,13 @@ const metrics = computed(() =>
         <div class="flex items-center justify-between border-b border-slate-200 p-4">
           <h2 class="font-semibold"> {{ tr("ผลตรวจเงื่อนไขบังคับ (Hard Constraints)") }} </h2>
           <span v-if="report" class="rounded-full px-3 py-1 text-sm font-semibold"
-            :class="allPass ? 'bg-primary-100 text-ok' : 'bg-red-50 text-err'">{{ allPass ? '✅ ผ่านครบ 12/12' : `❌ ผ่าน ${passCount}/12` }}</span>
+            :class="allPass ? 'bg-primary-100 text-ok' : 'bg-red-50 text-err'">{{ allPass ? tr('✅ ผ่านครบ 12/12') : message('❌ ผ่าน {count}/12', { count: passCount }) }}</span>
         </div>
 
         <div v-if="loading" class="flex items-center gap-3 p-6 text-slate-600">
           <span class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" /> {{ tr("กำลังโหลดผลตรวจ…") }} </div>
         <p v-else-if="error" class="p-4 text-err">
-          ❌ {{ error }} <button class="ml-2 underline" @click="load"> {{ tr("ลองใหม่") }} </button>
+          ❌ {{ tr(error) }} <button class="ml-2 underline" @click="load"> {{ tr("ลองใหม่") }} </button>
         </p>
         <ul v-else class="divide-y divide-slate-100">
           <li v-for="c in checks" :key="c.n" class="flex items-center gap-3 px-4 py-2.5 text-sm">

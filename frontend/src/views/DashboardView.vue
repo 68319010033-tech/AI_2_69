@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useSessionStore } from '@/stores/session'
-import { t } from '@/i18n'
+import { t, formatDate } from '@/i18n'
 import { api } from '@/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 const store = useSessionStore()
@@ -53,7 +53,7 @@ async function checkHealth() {
     <div class="mt-6 grid gap-4 sm:grid-cols-3">
       <div class="product-card"><p class="text-sm text-slate-500">{{ t('Files loaded') }}</p><p class="mt-2 text-3xl font-bold">{{ Object.keys(store.files).length }}<span class="text-lg text-slate-400"> / 10</span></p></div>
       <div class="product-card"><p class="text-sm text-slate-500">{{ t('Data status') }}</p><p class="mt-2 font-semibold">{{ t(store.dirty ? 'Changes need validation' : store.validated ? 'Ready to generate' : 'Not yet validated') }}</p></div>
-      <div class="product-card"><p class="text-sm text-slate-500">{{ t('Last successful generation') }}</p><p class="mt-2 font-semibold">{{ store.lastGeneratedAt ? new Date(store.lastGeneratedAt).toLocaleString() : t('No timetable yet') }}</p><RouterLink v-if="store.generated" to="/timetable" class="text-primary-700 underline">{{ t('Open timetable') }}</RouterLink></div>
+      <div class="product-card"><p class="text-sm text-slate-500">{{ t('Last successful generation') }}</p><p class="mt-2 font-semibold">{{ store.lastGeneratedAt ? formatDate(store.lastGeneratedAt) : t('No timetable yet') }}</p><RouterLink v-if="store.generated" to="/timetable" class="text-primary-700 underline">{{ t('Open timetable') }}</RouterLink></div>
     </div>
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
       <section class="product-card lg:col-span-2">

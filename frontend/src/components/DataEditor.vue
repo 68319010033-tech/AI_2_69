@@ -132,7 +132,7 @@ defineExpose({ focusIssue })
                                 :class="errorsAt(x.n - 2, i).length ? 'bg-red-50 ring-1 ring-inset ring-red-400' : ''">
                                 <select v-if="choices(current.headers[i])" :value="c" :disabled="store.editingLocked"
                                     :aria-invalid="errorsAt(x.n - 2, i).length > 0" :aria-describedby="errorsAt(x.n - 2, i).length ? `error-${x.n}-${i}` : undefined"
-                                    :aria-label="`${current.headers[i]} แถว ${x.n}`" class="min-w-32 rounded border border-slate-200 p-1"
+                                    :aria-label="`${current.headers[i]} ${t('แถว')} ${x.n}`" class="min-w-32 rounded border border-slate-200 p-1"
                                     @change="store.updateCell(active, x.n - 2, i, $event.target.value)">
                                     <option value=""> {{ tr("— เลือก —") }} </option>
                                     <option v-if="c && !choices(current.headers[i]).includes(c)" :value="c">{{ c }} {{ tr("(จากไฟล์)") }} </option>
@@ -140,12 +140,12 @@ defineExpose({ focusIssue })
                                 </select>
                                 <input v-else-if="columnDefinition(current.headers[i])?.[1].type === 'int'" :value="c" type="text" inputmode="numeric"
                                     :aria-invalid="errorsAt(x.n - 2, i).length > 0" :aria-describedby="errorsAt(x.n - 2, i).length ? `error-${x.n}-${i}` : undefined"
-                                    :disabled="store.editingLocked" :aria-label="`${current.headers[i]} แถว ${x.n}`"
+                                    :disabled="store.editingLocked" :aria-label="`${current.headers[i]} ${t('แถว')} ${x.n}`"
                                     class="w-32 rounded border border-slate-200 px-2 py-1"
                                     @input="store.updateCell(active, x.n - 2, i, $event.target.value)" />
                                 <textarea v-else :value="c" rows="1" :disabled="store.editingLocked"
                                     :aria-invalid="errorsAt(x.n - 2, i).length > 0" :aria-describedby="errorsAt(x.n - 2, i).length ? `error-${x.n}-${i}` : undefined"
-                                    :aria-label="`${current.headers[i] || 'คอลัมน์เพิ่มเติม'} แถว ${x.n}`"
+                                    :aria-label="`${current.headers[i] || 'คอลัมน์เพิ่มเติม'} ${t('แถว')} ${x.n}`"
                                     class="w-full min-w-32 rounded border border-slate-200 px-2 py-1 focus:border-primary-500 focus:outline-none"
                                     @input="store.updateCell(active, x.n - 2, i, $event.target.value)"></textarea>
                                 <p v-if="errorsAt(x.n - 2, i).length" :id="`error-${x.n}-${i}`" class="mt-1 min-w-48 max-w-72 text-xs font-medium text-red-700">
@@ -153,7 +153,7 @@ defineExpose({ focusIssue })
                                 </p>
                             </td>
                             <td class="px-3 py-1.5">
-                                <button :disabled="store.editingLocked" :aria-label="`ลบแถว ${x.n}`"
+                                <button :disabled="store.editingLocked" :aria-label="`${t('ลบแถว')} ${x.n}`"
                                     class="whitespace-nowrap text-red-600 disabled:opacity-50"
                                     @click="pendingDelete = { file: active, row: x.n - 2 }"> {{ tr("ลบแถว") }} </button>
                             </td>

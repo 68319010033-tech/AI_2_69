@@ -1,4 +1,5 @@
 <script setup>
+import { t as copy, formatDate, message } from '@/i18n'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useSessionStore } from '@/stores/session'
 import AppIcon from '@/components/AppIcon.vue'
@@ -18,7 +19,7 @@ const dialog = ref(null)
 let pending = null
 
 const fmt = (t) =>
-  new Date(t).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  formatDate(t, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 const sameName = computed(() =>
   store.snapshots.some((s) => s.name.trim().toLowerCase() === name.value.trim().toLowerCase()),
@@ -27,7 +28,7 @@ const canSave = computed(() => !!name.value.trim() && Object.keys(store.drafts).
 
 function info(s) {
   const f = Object.values(s.data)
-  return `${f.length} ไฟล์ · ${f.reduce((a, d) => a + d.rows.length, 0)} แถว`
+  return `${f.length} ${copy('ไฟล์')} · ${f.reduce((a, d) => a + d.rows.length, 0)} ${copy('แถว')}`
 }
 
 function flash(m) {
@@ -49,7 +50,7 @@ function onKey(e) {
 }
 watch(open, async (v) => {
   if (v) {
-    name.value = `ชุดข้อมูล ${fmt(Date.now())}`
+    name.value = `${copy('ชุดข้อมูล')} ${fmt(Date.now())}`
     msg.value = null
     document.addEventListener('mousedown', onDocDown)
     document.addEventListener('keydown', onKey)
@@ -95,7 +96,7 @@ function askLoad(s) {
   if (!store.editedTotal) return doLoad(s)
   ask(
     {
-      title: `โหลดชุด "${s.name}"?`,
+      title: message('โหลดชุด "{name}"?', { name: s.name }),
       message: 'ข้อมูลที่แก้อยู่ตอนนี้จะถูกแทนที่ทั้งหมด และกด "ย้อนกลับ" เอาคืนไม่ได้\nถ้ายังไม่ได้บันทึกเป็นชุด ให้บันทึกก่อน',
       confirmText: 'โหลดชุดนี้',
       danger: true,
@@ -105,7 +106,7 @@ function askLoad(s) {
 }
 function askDelete(s) {
   ask(
-    { title: `ลบชุด "${s.name}"?`, message: 'ลบแล้วเอาคืนไม่ได้', confirmText: 'ลบชุดนี้', danger: true },
+    { title: message('ลบชุด "{name}"?', { name: s.name }), message: 'ลบแล้วเอาคืนไม่ได้', confirmText: 'ลบชุดนี้', danger: true },
     () => store.deleteSnapshot(s.id),
   )
 }
@@ -121,9 +122,7 @@ function askDelete(s) {
       :aria-expanded="open"
       @click="open = !open"
     >
-      <AppIcon name="save" />
-      ชุดข้อมูล
-      <span v-if="store.snapshots.length" class="rounded-full bg-primary-100 px-1.5 text-xs font-semibold text-primary-700">{{ store.snapshots.length }}</span>
+      <AppIcon name="save" /> {{ copy("ชุดข้อมูล") }} <span v-if="store.snapshots.length" class="rounded-full bg-primary-100 px-1.5 text-xs font-semibold text-primary-700">{{ store.snapshots.length }}</span>
       <AppIcon name="chevron" :size="14" class="transition-transform motion-reduce:transition-none" :class="open ? 'rotate-180' : ''" />
     </button>
 
@@ -133,7 +132,7 @@ function askDelete(s) {
     >
       <!-- บันทึกชุดใหม่ -->
       <div class="p-3">
-        <label for="snapshot-name" class="text-xs font-semibold text-slate-600">บันทึกข้อมูลที่แก้อยู่เป็นชุดใหม่</label>
+        <label for="snapshot-name" class="text-xs font-semibold text-slate-600"> {{ copy("บันทึกข้อมูลที่แก้อยู่เป็นชุดใหม่") }} </label>
         <div class="mt-1.5 flex gap-2">
           <input
             id="snapshot-name"
@@ -149,23 +148,23 @@ function askDelete(s) {
             class="h-8 shrink-0 rounded-lg bg-primary-600 px-3 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
             :disabled="!canSave"
             @click="save"
-          >บันทึก</button>
+          > {{ copy("บันทึก") }} </button>
         </div>
-        <p v-if="sameName" class="mt-1.5 text-xs text-warn">มีชื่อนี้อยู่แล้ว — จะบันทึกทับชุดเดิม</p>
+        <p v-if="sameName" class="mt-1.5 text-xs text-warn"> {{ copy("มีชื่อนี้อยู่แล้ว — จะบันทึกทับชุดเดิม") }} </p>
         <p
           v-if="msg"
           role="status"
           class="mt-1.5 flex items-center gap-1 text-xs"
           :class="msg.ok ? 'text-ok' : 'text-err'"
         >
-          <AppIcon :name="msg.ok ? 'check' : 'alert'" :size="14" />{{ msg.text }}
+          <AppIcon :name="msg.ok ? 'check' : 'alert'" :size="14" />{{ copy(msg.text) }}
         </p>
       </div>
 
       <!-- รายการชุดที่บันทึกไว้ -->
       <div class="border-t border-slate-100">
-        <div class="px-3 pb-1 pt-2.5 text-xs font-semibold text-slate-600">ชุดที่บันทึกไว้ ({{ store.snapshots.length }})</div>
-        <p v-if="!store.snapshots.length" class="px-3 pb-4 pt-1 text-sm text-slate-400">ยังไม่มีชุดที่บันทึกไว้</p>
+        <div class="px-3 pb-1 pt-2.5 text-xs font-semibold text-slate-600"> {{ copy("ชุดที่บันทึกไว้ (") }} {{ store.snapshots.length }})</div>
+        <p v-if="!store.snapshots.length" class="px-3 pb-4 pt-1 text-sm text-slate-400"> {{ copy("ยังไม่มีชุดที่บันทึกไว้") }} </p>
         <ul v-else class="max-h-64 overflow-auto pb-1.5">
           <li v-for="s in store.snapshots" :key="s.id" class="group flex items-center gap-2 px-3 py-2 hover:bg-primary-50/50">
             <div class="min-w-0 flex-1">
@@ -175,11 +174,11 @@ function askDelete(s) {
             <button
               class="shrink-0 rounded-lg border border-primary-500 px-2.5 py-1 text-xs text-primary-700 hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               @click="askLoad(s)"
-            >โหลด</button>
+            > {{ copy("โหลด") }} </button>
             <button
               class="shrink-0 rounded-md p-1.5 text-slate-300 hover:bg-red-50 hover:text-err focus:outline-none focus-visible:ring-2 focus-visible:ring-err"
-              :aria-label="`ลบชุด ${s.name}`"
-              title="ลบชุดนี้"
+              :aria-label="`${copy('ลบชุดนี้')} ${s.name}`"
+              :title="copy('ลบชุดนี้')"
               @click="askDelete(s)"
             ><AppIcon name="trash" /></button>
           </li>

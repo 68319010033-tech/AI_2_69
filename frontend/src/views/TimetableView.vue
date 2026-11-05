@@ -1,13 +1,16 @@
 <script setup>
 import { findConflicts } from '@/lib/scheduleReview'
 import { t as tr } from '@/i18n'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { toPng } from 'html-to-image'
 import { useRouter } from 'vue-router'
+import SessionDetails from '@/components/SessionDetails.vue'
 import TimetableGrid from '@/components/TimetableGrid.vue'
 import TimetableFormal from '@/components/TimetableFormal.vue'
 import { useSessionStore } from '@/stores/session'
 const sheet = ref(null)
+const details = ref(null)
+const capturing = ref(false)
 const modeLabel = computed(() => ({ group: 'กลุ่มเรียน', teacher: 'ครู', room: 'ห้อง' })[mode.value])
 
 // แจกสีต่อวิชา: มุม hue กระจายห่างกันสม่ำเสมอ ไม่ซ้ำกัน
@@ -17,17 +20,24 @@ const colors = computed(() => {
 })
 
 async function download() {
-    const el = sheet.value
-    const url = await toPng(el, {
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-    })
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `timetable-${look.value}-${mode.value}-${selected.value}.png`
-    a.click()
+    if (!sheet.value || capturing.value) return
+    capturing.value = true
+    try {
+        await nextTick()
+        const el = sheet.value
+        const url = await toPng(el, {
+            pixelRatio: 2,
+            backgroundColor: '#ffffff',
+            width: el.scrollWidth,
+            height: el.scrollHeight,
+        })
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `timetable-${look.value}-${mode.value}-${selected.value}.png`
+        a.click()
+    } finally {
+        capturing.value = false
+    }
 }
 const store = useSessionStore()
 const router = useRouter()
@@ -116,15 +126,15 @@ onMounted(() => { if (!store.schedule.length && store.generationSessionId) store
                 {{ sessions.length }} {{ tr("รายการ ·") }} {{ totalPeriods }} {{ tr("คาบ/สัปดาห์") }} </p>
 
             <div class="mt-3 overflow-x-auto pb-8">
-                <div ref="sheet" class="export-surface min-w-[900px] rounded-2xl bg-white p-5">
+                <div ref="sheet" :class="capturing ? 'export-surface' : 'screen-sheet'" class="min-w-[900px] rounded-2xl bg-white p-5">
                      <div v-if="look === 'color'" class="mb-3 flex items-center justify-between">
                         <div class="text-2xl font-bold text-primary-700"> {{ tr("ตารางเรียน") }} </div>
                         <div class="rounded-full border-2 border-primary-500 px-5 py-1 font-semibold text-primary-700">
                             {{ tr(modeLabel) }}: {{ optionLabel(selected) }}
                         </div>
                     </div>
-            <TimetableGrid v-if="look === 'color'" :sessions="sessions" :mode="mode" :colors="colors" />
-          <TimetableFormal v-else :sessions="sessions" :mode="mode" :title="`${modeLabel} ${optionLabel(selected)}`" />
+            <TimetableGrid v-if="look === 'color'" :sessions="sessions" :mode="mode" :colors="colors" @select="details = $event" />
+          <TimetableFormal v-else :sessions="sessions" :mode="mode" :title="`${tr(modeLabel)} ${optionLabel(selected)}`" @select="details = $event" />
                 </div>
             </div>
 
@@ -136,4 +146,5 @@ onMounted(() => { if (!store.schedule.length && store.generationSessionId) store
             </div>
         </template>
     </div>
+    <SessionDetails v-if="details" :session="details" @close="details = null" />
 </template>

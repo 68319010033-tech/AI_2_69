@@ -1,4 +1,5 @@
 <script setup>
+import { t as copy } from '@/i18n'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { VIEWS, listEntries } from '@/utils/exportSchedule'
 import AppIcon from '@/components/AppIcon.vue'
@@ -78,12 +79,12 @@ watch(() => props.open, async (v) => {
           <!-- หัว -->
           <div class="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
             <div>
-              <h2 id="pdf-dialog-title" class="text-lg font-bold text-slate-800">พิมพ์ / บันทึกเป็น PDF</h2>
-              <p class="mt-0.5 text-sm text-slate-500">เลือกตารางที่ต้องการ และรูปแบบการจัดหน้า</p>
+              <h2 id="pdf-dialog-title" class="text-lg font-bold text-slate-800"> {{ copy("พิมพ์ / บันทึกเป็น PDF") }} </h2>
+              <p class="mt-0.5 text-sm text-slate-500"> {{ copy("เลือกตารางที่ต้องการ และรูปแบบการจัดหน้า") }} </p>
             </div>
             <button
               class="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-              aria-label="ปิด"
+              :aria-label="copy('ปิด')"
               @click="emit('close')"
             ><AppIcon name="x" :size="18" /></button>
           </div>
@@ -91,13 +92,11 @@ watch(() => props.open, async (v) => {
           <!-- เนื้อหา -->
           <div class="flex-1 overflow-auto px-6 py-4">
             <div v-if="loading" class="flex items-center gap-3 py-10 text-slate-600">
-              <span class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-              กำลังโหลดข้อมูลตาราง…
-            </div>
+              <span class="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" /> {{ copy("กำลังโหลดข้อมูลตาราง…") }} </div>
 
             <div v-else-if="error" class="py-8 text-center">
               <p class="text-err">❌ {{ error }}</p>
-              <button class="mt-3 rounded-lg border border-primary-500 px-4 py-1.5 text-sm text-primary-700 hover:bg-primary-50" @click="emit('retry')">ลองใหม่</button>
+              <button class="mt-3 rounded-lg border border-primary-500 px-4 py-1.5 text-sm text-primary-700 hover:bg-primary-50" @click="emit('retry')"> {{ copy("ลองใหม่") }} </button>
             </div>
 
             <template v-else>
@@ -105,15 +104,15 @@ watch(() => props.open, async (v) => {
               <section v-for="v in VIEWS" :key="v.key" class="mb-5">
                 <div class="mb-2 flex items-center gap-3">
                   <h3 class="text-sm font-semibold text-slate-700">
-                    {{ v.label }}
-                    <span class="ml-1 font-normal text-slate-400">เลือก {{ sel[v.key].size }}/{{ entries[v.key].length }}</span>
+                    {{ copy(v.label) }}
+                    <span class="ml-1 font-normal text-slate-400"> {{ copy("เลือก") }} {{ sel[v.key].size }}/{{ entries[v.key].length }}</span>
                   </h3>
                   <div class="flex gap-1 text-xs">
-                    <button class="rounded px-2 py-0.5 text-primary-700 hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="selectAll(v.key)">เลือกทั้งหมด</button>
-                    <button class="rounded px-2 py-0.5 text-slate-500 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="clearAll(v.key)">ล้าง</button>
+                    <button class="rounded px-2 py-0.5 text-primary-700 hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="selectAll(v.key)"> {{ copy("เลือกทั้งหมด") }} </button>
+                    <button class="rounded px-2 py-0.5 text-slate-500 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="clearAll(v.key)"> {{ copy("ล้าง") }} </button>
                   </div>
                 </div>
-                <p v-if="!entries[v.key].length" class="text-sm text-slate-400">ไม่มีข้อมูล</p>
+                <p v-if="!entries[v.key].length" class="text-sm text-slate-400"> {{ copy("ไม่มีข้อมูล") }} </p>
                 <div v-else class="flex flex-wrap gap-1.5">
                   <label v-for="e in entries[v.key]" :key="e.id" class="cursor-pointer">
                     <input
@@ -134,7 +133,7 @@ watch(() => props.open, async (v) => {
 
               <!-- จัดหน้า -->
               <section>
-                <h3 class="mb-2 text-sm font-semibold text-slate-700">การจัดหน้า</h3>
+                <h3 class="mb-2 text-sm font-semibold text-slate-700"> {{ copy("การจัดหน้า") }} </h3>
                 <div class="grid gap-3 sm:grid-cols-2">
                   <label v-for="o in [
                     { v: 1, t: '1 ตารางต่อหน้า', d: 'A4 แนวนอน · ตารางใหญ่ อ่านง่าย' },
@@ -151,8 +150,8 @@ watch(() => props.open, async (v) => {
                         <span v-for="k in o.v" :key="k" class="block flex-1 rounded-sm bg-primary-200" />
                       </span>
                       <span>
-                        <span class="block text-sm font-semibold text-slate-800">{{ o.t }}</span>
-                        <span class="block text-xs text-slate-500">{{ o.d }}</span>
+                        <span class="block text-sm font-semibold text-slate-800">{{ copy(o.t) }}</span>
+                        <span class="block text-xs text-slate-500">{{ copy(o.d) }}</span>
                       </span>
                     </span>
                   </label>
@@ -164,16 +163,16 @@ watch(() => props.open, async (v) => {
           <!-- ท้าย -->
           <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
             <p class="text-sm" :class="total ? 'text-slate-600' : 'text-warn'">
-              <template v-if="total">เลือก <b>{{ total }}</b> ตาราง · ประมาณ <b>{{ pages }}</b> หน้า</template>
-              <template v-else>ยังไม่ได้เลือกตาราง</template>
+              <template v-if="total"> {{ copy("เลือก") }} <b>{{ total }}</b> {{ copy("ตาราง · ประมาณ") }} <b>{{ pages }}</b> {{ copy("หน้า") }} </template>
+              <template v-else> {{ copy("ยังไม่ได้เลือกตาราง") }} </template>
             </p>
             <div class="flex gap-2">
-              <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="emit('close')">ยกเลิก</button>
+              <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" @click="emit('close')"> {{ copy("ยกเลิก") }} </button>
               <button
                 class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
                 :disabled="!total || loading || !!error"
                 @click="submit"
-              >🖨 พิมพ์ / บันทึกเป็น PDF</button>
+              > {{ copy("🖨 พิมพ์ / บันทึกเป็น PDF") }} </button>
             </div>
           </div>
         </div>

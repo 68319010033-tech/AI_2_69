@@ -1,3 +1,4 @@
+import { locale, t as tr } from '../i18n.js'
 import Papa from 'papaparse'
 import ExcelJS from 'exceljs'
 
@@ -117,7 +118,7 @@ function writeGrid(ws, top, title, list, second) {
 
   ;['คาบ', ...DAYS.map((d) => d[1])].forEach((h, i) => {
     const c = ws.getCell(top + 1, i + 1)
-    c.value = h
+    c.value = tr(h)
     c.font = { bold: true, color: { argb: 'FF174E30' } }
     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFFAF2' } }
     c.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -127,7 +128,7 @@ function writeGrid(ws, top, title, list, second) {
   for (let p = 1; p <= 8; p++) {
     const r = top + 1 + bodyRow(p)
     const c = ws.getCell(r, 1)
-    c.value = `คาบ ${p}\n${TIMES[p - 1]}`
+    c.value = `${tr('คาบ')} ${p}\n${TIMES[p - 1]}`
     c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
     c.border = border
     ws.getRow(r).height = 48
@@ -137,7 +138,7 @@ function writeGrid(ws, top, title, list, second) {
   const lunch = top + 1 + 5
   ws.mergeCells(lunch, 1, lunch, 6)
   const lc = ws.getCell(lunch, 1)
-  lc.value = 'พักกลางวัน 12.00–13.00'
+  lc.value = tr('พักกลางวัน 12.00–13.00')
   lc.alignment = { horizontal: 'center', vertical: 'middle' }
   lc.font = { color: { argb: 'FF52695A' }, size: 10 }
   lc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F9F6' } }
@@ -163,12 +164,12 @@ export async function buildXlsxBlob(sessions) {
   wb.creator = 'Smart Campus Scheduler'
 
   // ชีตรวม: ตารางรายการ กรองได้
-  const all = wb.addWorksheet('รายการทั้งหมด', { views: [{ state: 'frozen', ySplit: 1 }] })
+  const all = wb.addWorksheet(tr('รายการทั้งหมด'), { views: [{ state: 'frozen', ySplit: 1 }] })
   all.columns = [
-    { header: 'วิชา', key: 'course', width: 28 }, { header: 'กลุ่ม', key: 'group', width: 14 },
-    { header: 'ครู', key: 'teacher', width: 20 }, { header: 'ห้อง', key: 'room', width: 18 },
-    { header: 'วัน', key: 'day', width: 12 }, { header: 'คาบเริ่ม', key: 'start', width: 10 },
-    { header: 'จำนวนคาบ', key: 'length', width: 11 }, { header: 'เวลา', key: 'time', width: 16 },
+    { header: tr('วิชา'), key: 'course', width: 28 }, { header: tr('กลุ่ม'), key: 'group', width: 14 },
+    { header: tr('ครู'), key: 'teacher', width: 20 }, { header: tr('ห้อง'), key: 'room', width: 18 },
+    { header: tr('วัน'), key: 'day', width: 12 }, { header: tr('คาบเริ่ม'), key: 'start', width: 10 },
+    { header: tr('จำนวนคาบ'), key: 'length', width: 11 }, { header: tr('เวลา'), key: 'time', width: 16 },
   ]
   const dayName = Object.fromEntries(DAYS)
   const order = Object.fromEntries(DAYS.map((d, i) => [d[0], i]))
@@ -176,7 +177,7 @@ export async function buildXlsxBlob(sessions) {
     .sort((a, b) => order[a.day] - order[b.day] || a.start_period - b.start_period)
     .forEach((s) => all.addRow({
       course: s.course, group: s.group, teacher: s.teacher, room: s.room,
-      day: dayName[s.day] ?? s.day, start: s.start_period, length: s.length,
+      day: tr(dayName[s.day] ?? s.day), start: s.start_period, length: s.length,
       time: `${TIMES[s.start_period - 1]?.slice(0, 5)}–${TIMES[s.start_period + s.length - 2]?.slice(6)}`,
     }))
   all.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
@@ -185,10 +186,10 @@ export async function buildXlsxBlob(sessions) {
 
   // ชีตตารางรายกลุ่ม/ครู/ห้อง: วางตารางต่อกันในชีตเดียว
   for (const v of VIEWS) {
-    const ws = wb.addWorksheet(v.label)
+    const ws = wb.addWorksheet(tr(v.label))
     ws.columns = [{ width: 14 }, ...Array(5).fill({ width: 28 })]
     let top = 1
-    for (const e of groupBy(sessions, v.idKey, v.nameKey)) top = writeGrid(ws, top, `${v.label}: ${e.name}`, e.list, v.second)
+    for (const e of groupBy(sessions, v.idKey, v.nameKey)) top = writeGrid(ws, top, `${tr(v.label)}: ${e.name}`, e.list, v.second)
   }
 
   const buf = await wb.xlsx.writeBuffer()
@@ -207,7 +208,7 @@ function gridTable(list, second) {
   }
   let rows = ''
   for (let p = 1; p <= 8; p++) {
-    if (p === 5) rows += '<tr class="lunch"><td colspan="6">พักกลางวัน 12.00–13.00</td></tr>'
+    if (p === 5) rows += `<tr class="lunch"><td colspan="6">${tr('พักกลางวัน 12.00–13.00')}</td></tr>`
     const cells = DAYS.map(([d]) => {
       const key = d + p
       if (covered.has(key)) return ''
@@ -216,9 +217,9 @@ function gridTable(list, second) {
       const bg = `hsl(${hueOf(s.course_id)} 55% 88%)`
       return `<td class="s" rowspan="${s.length}" style="background:${bg}"><b>${esc(s.course)}</b><br>${esc(second(s))}</td>`
     }).join('')
-    rows += `<tr><th class="p">คาบ ${p}<br><small>${TIMES[p - 1]}</small></th>${cells}</tr>`
+    rows += `<tr><th class="p">${tr('คาบ')} ${p}<br><small>${TIMES[p - 1]}</small></th>${cells}</tr>`
   }
-  return `<table><thead><tr><th class="p">คาบ</th>${DAYS.map((d) => `<th>${d[1]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`
+  return `<table><thead><tr><th class="p">${tr('คาบ')}</th>${DAYS.map((d) => `<th>${tr(d[1])}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`
 }
 
 // options:
@@ -235,18 +236,18 @@ export function buildPrintHtml(sessions, title = 'ตารางเรียน
       if (allow && !allow.has(String(e.id))) continue
       const total = e.list.reduce((a, s) => a + s.length, 0)
       items.push(
-        `<section><h2>${esc(e.name)} <small>${v.label} · ${total} คาบ/สัปดาห์</small></h2>${gridTable(e.list, v.second)}</section>`,
+        `<section><h2>${esc(e.name)} <small>${tr(v.label)} · ${total} ${tr('คาบ/สัปดาห์')}</small></h2>${gridTable(e.list, v.second)}</section>`,
       )
     }
   }
-  if (!items.length) throw new Error('ยังไม่ได้เลือกตารางที่จะพิมพ์')
+  if (!items.length) throw new Error(tr('ยังไม่ได้เลือกตารางที่จะพิมพ์'))
 
   const n = perPage === 2 ? 2 : 1
   const pages = []
   for (let i = 0; i < items.length; i += n) pages.push(`<div class="page">${items.slice(i, i + n).join('')}</div>`)
   const portrait = n === 2
 
-  return `<!doctype html><html lang="th"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+  return `<!doctype html><html lang="${locale.value}"><head><meta charset="utf-8"><title>${esc(tr(title))}</title><style>
 @page { size: A4 ${portrait ? 'portrait' : 'landscape'}; margin: ${portrait ? '10mm' : '12mm'} }
 body { font-family: "Leelawadee UI", Tahoma, "Noto Sans Thai", sans-serif; color: #14271c; margin: 0 }
 .page { display: flex; flex-direction: column; gap: ${portrait ? '9mm' : '0'}; page-break-after: always; break-after: page }

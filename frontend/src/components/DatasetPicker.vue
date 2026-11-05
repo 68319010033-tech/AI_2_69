@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { api } from '@/api'
 import { useSessionStore } from '@/stores/session'
-import { t } from '@/i18n'
+import { t, formatDate } from '@/i18n'
 const store = useSessionStore()
 const datasets = ref([])
 const loading = ref(false)
@@ -31,7 +31,7 @@ onMounted(refresh)
     <label for="generate-dataset" class="mt-4 block text-sm font-medium">{{ t('Dataset') }}</label>
     <select id="generate-dataset" :value="store.selectedDataset?.id || ''" :disabled="loading || store.editingLocked" class="mt-2 w-full rounded-lg border border-slate-300 bg-white p-3" @change="select">
       <option value="">{{ t(loading ? 'Loading…' : 'Select a saved dataset first') }}</option>
-      <option v-for="dataset in datasets" :key="dataset.id" :value="dataset.id">{{ dataset.name }} · {{ new Date(dataset.createdAt).toLocaleString() }} · {{ dataset.id.slice(-4) }}</option>
+      <option v-for="dataset in datasets" :key="dataset.id" :value="dataset.id">{{ dataset.name }} · {{ formatDate(dataset.createdAt) }} · {{ dataset.id.slice(-4) }}</option>
     </select>
     <p v-if="store.selectedDataset" class="mt-3 text-sm text-slate-500">{{ store.selectedDataset.offerings }} {{ t('รายการสอน') }} · {{ store.selectedDataset.periods }} {{ t('คาบ') }}</p>
     <p v-if="error" role="alert" class="mt-3 text-red-700">{{ t(error) }}</p>

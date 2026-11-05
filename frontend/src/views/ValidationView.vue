@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import DataEditor from '@/components/DataEditor.vue'
+import IssueCorrection from '@/components/IssueCorrection.vue'
 import { api } from '@/api'
 import { t } from '@/i18n'
 const store = useSessionStore()
@@ -88,7 +89,7 @@ onMounted(async () => {
                     <tbody><tr v-for="(issue, index) in rows" :key="index" :class="issue.severity === 'error' ? 'bg-red-50 text-red-800' : 'text-slate-700'">
                         <td class="p-2">{{ issue.file }} / {{ issue.row ?? '—' }}</td><td class="p-2">{{ issue.column || '—' }}</td>
                         <td class="p-2"><span class="font-semibold">{{ t(issue.severity === 'error' ? 'ข้อผิดพลาด' : issue.severity === 'warning' ? 'คำเตือน' : 'ข้อมูลเพิ่มเติม') }}:</span> {{ issue.message }}<p class="mt-1 text-sm font-medium">{{ t("How to fix") }}: {{ issue.suggestion || t("Check this value against the related data file, then validate again.") }}</p></td>
-                        <td class="p-2"><button v-if="store.files[issue.file + '.csv']" class="whitespace-nowrap font-semibold underline" @click="editor?.focusIssue(issue)">{{ t('ไปแก้ไข') }}</button><RouterLink v-else to="/upload" class="underline">{{ t('อัปโหลดไฟล์') }}</RouterLink></td>
+                        <td class="p-2"><IssueCorrection v-if="store.files[issue.file + '.csv']" :issue="issue" @locate="editor?.focusIssue(issue)" @recheck="check" /><RouterLink v-else to="/upload" class="underline">{{ t('อัปโหลดไฟล์') }}</RouterLink></td>
                     </tr></tbody>
                 </table>
                 <p v-if="!rows.length" class="p-3 text-slate-500">{{ t('ไม่พบรายการ') }}</p>

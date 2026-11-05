@@ -1,4 +1,5 @@
 <script setup>
+import { t } from '@/i18n'
 import { nextTick, ref, watch } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -67,7 +68,7 @@ function onTab(e) {
             </div>
             <div class="min-w-0">
               <h2 class="text-base font-bold text-slate-800">{{ title }}</h2>
-              <p class="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-500">{{ message }}</p>
+              <p class="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-500">{{ t(message) }}</p>
             </div>
           </div>
           <div class="mt-6 flex justify-end gap-2">
@@ -75,13 +76,13 @@ function onTab(e) {
               ref="cancelBtn"
               class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               @click="emit('cancel')"
-            >{{ cancelText }}</button>
+            >{{ t(cancelText) }}</button>
             <button
               ref="okBtn"
               class="rounded-lg px-4 py-2 text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               :class="danger ? 'bg-err hover:bg-red-700 focus-visible:ring-err' : 'bg-primary-600 hover:bg-primary-700 focus-visible:ring-primary-500'"
               @click="emit('confirm')"
-            >{{ confirmText }}</button>
+            >{{ t(confirmText) }}</button>
           </div>
         </div>
       </div>

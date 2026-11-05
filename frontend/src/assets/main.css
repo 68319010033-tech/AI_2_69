@@ -18,7 +18,6 @@
   --color-warn: #d97706;
   --color-err:  #dc2626;
 }
-
 body {
   @apply bg-white text-slate-800 antialiased;
 }
@@ -52,4 +51,35 @@ button:not(:disabled), summary { cursor: pointer; }
   html[data-theme="dark"] :is(button, a):hover:not(.export-surface *) { filter: brightness(1.12); }
   html[data-theme="dark"] .export-surface { color-scheme: light; color: #1e293b; background: white; }
   html[data-theme="dark"] :focus-visible { outline-color: #6ee7b7; }
+}
+
+.course-cell {
+  color: hsl(var(--course-hue) 55% 20%);
+  background: hsl(var(--course-hue) 76% 90%);
+  border: 2px solid hsl(var(--course-hue) 52% 64%);
+}
+.formal-session:hover, .formal-session:focus-visible { background: #e5f4ee; }
+.session-dialog::backdrop { background: rgb(8 15 25 / 0.7); }
+.session-dialog dt { opacity: 0.8; }
+.session-dialog dd { font-weight: 600; overflow-wrap: anywhere; }
+@media screen {
+  html[data-theme="dark"] .screen-sheet .formal-table { background: #152338; color: #ecf3fa; }
+  html[data-theme="dark"] .screen-sheet .formal-table :is(th, td) { border-color: #53647b; }
+  html[data-theme="dark"] .screen-sheet .formal-table thead { background: #23364c; }
+  html[data-theme="dark"] .formal-session:is(:hover, :focus-visible) { background: #214a48; }
+  html[data-theme="dark"] .screen-sheet .course-cell {
+    color: hsl(var(--course-hue) 65% 88%);
+    background: hsl(var(--course-hue) 36% 21%);
+    border-color: hsl(var(--course-hue) 45% 47%);
+  }
+  html[data-theme="dark"] .bg-red-50:not(.export-surface *) { background: #3c202b; }
+  html[data-theme="dark"] .bg-amber-50:not(.export-surface *) { background: #392e1d; }
+  html[data-theme="dark"] .bg-green-50:not(.export-surface *) { background: #15352c; }
+  html[data-theme="dark"] [aria-invalid="true"] { border: 2px solid #fb7185; background: #321d2a; }
+  html[data-theme="dark"] :is(.bg-red-100, .bg-amber-100):not(.export-surface *) { background: #452c30; }
+  html[data-theme="dark"] :is(.text-warn, .text-amber-800):not(.export-surface *) { color: #fcd34d; }
+  html[data-theme="dark"] .text-ok:not(.export-surface *) { color: #86efac; }
+  html[data-theme="dark"] .session-dialog { color: #ecf3fa; background: #172235; }
+  html[data-theme="dark"] .hover\:bg-slate-50:hover:not(.export-surface *),
+  html[data-theme="dark"] .hover\:bg-primary-50:hover:not(.export-surface *) { background: #254239; }
 }

@@ -1,7 +1,7 @@
 <script setup>
 import SetupGuide from '@/components/SetupGuide.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import { t as tr } from '@/i18n'
+import { t as tr, importNotice } from '@/i18n'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore, REQUIRED_FILES } from '@/stores/session'
@@ -88,7 +88,7 @@ async function next() {
             </div>
         </div>
 
-        <p v-if="store.error" class="mt-4 rounded-lg bg-red-50 p-3 text-err">❌ {{ tr(store.error) }}</p>
+        <p v-if="store.error" class="mt-4 rounded-lg bg-red-50 p-3 text-err">❌ {{ importNotice(store.error) }}</p>
 
         <div class="mt-6 flex items-center justify-end gap-4">
            <span v-if="!store.ready" class="text-sm text-slate-500"> {{ tr("ยังไม่ได้อัปโหลด") }} {{ store.missing.length }} {{ tr("ไฟล์") }} </span>

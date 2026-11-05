@@ -1,5 +1,5 @@
 <script setup>
-import { t as tr } from '@/i18n'
+import { t as tr, message, importNotice } from '@/i18n'
 import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '@/api'
 import { useSessionStore } from '@/stores/session'
@@ -15,7 +15,8 @@ const mapping = ref({})
 const error = ref('')
 const reading = ref(false)
 const replace = ref(false)
-const detection = ref('')
+const inferredType = ref('')
+const detection = computed(() => inferredType.value ? message('แนะนำประเภท {type} จากชื่อไฟล์และหัวคอลัมน์ กรุณาตรวจการจับคู่ก่อนนำเข้า', { type: tr(FILE_LABELS[inferredType.value]) }) : tr('ยังระบุประเภทไม่ได้แน่ชัด กรุณาเลือกประเภทข้อมูลและจับคู่คอลัมน์ด้วยตนเอง'))
 const spec = computed(() => schema.value[type.value])
 const target = computed(() => `${type.value}.csv`)
 const canReplace = computed(() => !store.files[target.value] || replace.value)
@@ -54,9 +55,7 @@ async function readOther(event) {
         source.value = parseTable(await file.text())
         sourceName.value = file.name
         type.value = suggestType(schema.value, source.value.headers, file.name)
-        detection.value = type.value
-            ? `แนะนำประเภท ${FILE_LABELS[type.value]} จากชื่อไฟล์และหัวคอลัมน์ กรุณาตรวจการจับคู่ก่อนนำเข้า`
-            : 'ยังระบุประเภทไม่ได้แน่ชัด กรุณาเลือกประเภทข้อมูลและจับคู่คอลัมน์ด้วยตนเอง'
+        inferredType.value = type.value
     } catch (e) { error.value = e.message }
     finally { reading.value = false }
 }
@@ -81,7 +80,7 @@ function importMapped() {
         <div class="mt-3 flex flex-wrap items-center gap-3">
             <label class="text-sm"> {{ tr("ประเภทข้อมูล") }} <select v-model="type" :disabled="busy" class="ml-2 rounded border border-slate-300 p-2">
                     <option value=""> {{ tr("— เลือกประเภทข้อมูล —") }} </option>
-                    <option v-for="(_, name) in schema" :key="name" :value="name">{{ tr(FILE_LABELS[name]) }} ({{ name }} {{ tr(".csv)") }} </option>
+                    <option v-for="(_, name) in schema" :key="name" :value="name">{{ tr(FILE_LABELS[name]) }} ({{ name }}.csv) </option>
                 </select>
             </label>
             <button class="rounded border border-primary-500 px-3 py-2 text-sm text-primary-700 disabled:opacity-40"
@@ -112,7 +111,7 @@ function importMapped() {
                     </select>
                 </label>
             </div>
-            <p v-if="preview.error" class="mt-3 text-sm text-amber-700" role="status">{{ tr(preview.error) }}</p>
+            <p v-if="preview.error" class="mt-3 text-sm text-amber-700" role="status">{{ importNotice(preview.error) }}</p>
             <div v-else class="mt-4 overflow-x-auto">
                 <p class="mb-2 text-sm font-medium"> {{ tr("ตัวอย่างหลังจับคู่ (สูงสุด 5 แถว) — ยังไม่แทนที่ข้อมูลเดิมจนกว่าจะยืนยัน") }} </p>
                 <table class="w-full text-left text-sm">
@@ -127,7 +126,7 @@ function importMapped() {
                 <button class="text-sm text-slate-500" :disabled="busy" @click="source = null"> {{ tr("ยกเลิก") }} </button>
             </div>
         </div>
-        <p v-if="error" role="alert" class="mt-3 text-sm text-red-600">{{ tr(error) }}
+        <p v-if="error" role="alert" class="mt-3 text-sm text-red-600">{{ importNotice(error) }}
             <button v-if="!spec" class="ml-2 underline" @click="loadSchema"> {{ tr("ลองใหม่") }} </button>
         </p>
     </section>
