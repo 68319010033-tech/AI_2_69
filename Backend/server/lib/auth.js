@@ -23,9 +23,11 @@ async function hashPassword(value) {
   return `${salt}:${(await scrypt(value, salt, 64)).toString('hex')}`;
 }
 async function verifyPassword(value, encoded) {
-  const [salt, hash] = (encoded || `${'0'.repeat(32)}:${'0'.repeat(128)}`).split(':');
-  const actual = await scrypt(typeof value === 'string' ? value.slice(0, 128) : '', salt, 64);
-  return crypto.timingSafeEqual(actual, Buffer.from(hash, 'hex'));
+  const validRecord = typeof encoded === 'string' && /^[\da-f]{32}:[\da-f]{128}$/i.test(encoded);
+  const [salt, hash] = (validRecord ? encoded : `${'0'.repeat(32)}:${'0'.repeat(128)}`).split(':');
+  const validInput = typeof value === 'string' && value.length <= 128;
+  const actual = await scrypt(validInput ? value : '', salt, 64);
+  return crypto.timingSafeEqual(actual, Buffer.from(hash, 'hex')) && validRecord && validInput;
 }
 function validateConfig() {
   if (!process.env.JWT_SECRET || Buffer.byteLength(process.env.JWT_SECRET) < 32) throw new Error('Set JWT_SECRET to at least 32 random bytes');

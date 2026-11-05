@@ -18,7 +18,7 @@ const router = createRouter({
 
 router.beforeEach(async to => {
   await initializeAuth()
-  if (!to.meta.public && !auth.user) return '/login'
+  if (!to.meta.public && !auth.user) return { path: '/login', query: { next: to.path } }
   if (to.meta.admin && auth.user?.role !== 'admin') return '/upload'
   if (to.name === 'login' && auth.user) return '/'
 })

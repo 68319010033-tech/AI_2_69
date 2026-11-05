@@ -12,6 +12,11 @@ const editor = ref(null)
 const datasetName = ref('')
 const savingDataset = ref(false)
 const datasetError = ref('')
+const downloadError = ref('')
+async function download(url) {
+    downloadError.value = ''
+    try { await api.download(url) } catch { downloadError.value = 'ดาวน์โหลดไม่สำเร็จ' }
+}
 async function saveAndContinue() {
     if (!canNext.value || !datasetName.value.trim() || savingDataset.value) return
     savingDataset.value = true; datasetError.value = ''
@@ -101,12 +106,13 @@ onMounted(async () => {
             <div class="max-h-64 overflow-auto"><table class="w-full text-left text-sm"><tbody>
                 <tr v-for="(entry, index) in store.log" :key="index"><td class="p-2">{{ entry.file }}:{{ entry.row }} / {{ entry.column }}</td><td class="p-2">{{ entry.before }} → {{ entry.after }}</td><td class="p-2">{{ entry.rule }}</td></tr>
             </tbody></table></div>
-            <button v-if="store.sessionId && !store.dirty" class="mt-3 text-primary-700 underline" @click="api.download(api.cleaningLogUrl(store.sessionId))">{{ t('ดาวน์โหลดประวัติการล้างข้อมูล') }}</button>
+            <button v-if="store.sessionId && !store.dirty" class="mt-3 text-primary-700 underline" @click="download(api.cleaningLogUrl(store.sessionId))">{{ t('ดาวน์โหลดประวัติการล้างข้อมูล') }}</button>
         </details>
         <div v-if="store.stats && !store.dirty" class="mt-4 flex flex-wrap gap-2 text-sm">
             <span>{{ t('ดาวน์โหลดไฟล์ที่ล้างแล้ว:') }}</span>
-            <button v-for="name in Object.keys(store.files)" :key="name" class="text-primary-700 underline" @click="api.download(api.cleanedUrl(store.sessionId, name))">{{ name }}</button>
+            <button v-for="name in Object.keys(store.files)" :key="name" class="text-primary-700 underline" @click="download(api.cleanedUrl(store.sessionId, name))">{{ name }}</button>
         </div>
+        <p v-if="downloadError" role="alert" class="mt-2 text-red-700">{{ t(downloadError) }}</p>
         <section class="product-card mt-6"><h2 class="font-semibold">{{ t('Save a named dataset') }}</h2><p class="mt-2 text-sm text-slate-500">{{ t('After validation, save a snapshot you can select later on the Generate page.') }}</p><label for="dataset-name" class="mt-4 block text-sm">{{ t('Dataset name') }}</label><input id="dataset-name" v-model="datasetName" maxlength="80" class="mt-2 w-full rounded-lg border border-slate-300 bg-white p-3" :placeholder="t('e.g. Semester 1 — final data')" :disabled="savingDataset" /><p v-if="datasetError" role="alert" class="mt-2 text-red-700">{{ t(datasetError) }}</p></section>
         <div class="sticky bottom-0 z-10 mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 <button :disabled="!store.canNext || store.editingLocked" class="rounded-lg bg-primary-700 px-4 py-2 font-semibold text-white disabled:opacity-40" @click="check">{{ t(store.validating ? 'กำลังตรวจสอบข้อมูล…' : store.uploading ? 'กำลังบันทึก…' : 'บันทึกและตรวจสอบอีกครั้ง') }}</button>

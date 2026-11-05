@@ -191,4 +191,21 @@ test('SMTP failures fail closed and remove the undelivered code', async () => {
     await post('/auth/otp/request', { email: 'test@example.com', purpose: 'login' }).expect(503);
     assert.equal(await db.get(a.accountPath(id) + '/otps/login'), null);
   } finally { mail.sendOtp = original; }
+  await post('/auth/otp/request', { email: 'test@example.com', purpose: 'login' }).expect(202);
+  assert.equal(sent.length, 1);
+});
+
+test('verified mailbox recovery unlocks password login and establishes a working browser session', async () => {
+  const email = 'test@example.com', id = await user(email);
+  await post('/auth/login', { email, password: 'incorrect' }).expect(401);
+  await db.set(`authLoginAttempts/${id}`, { count: 10, until: Date.now() + 900000 });
+  await login().then(response => assert.equal(response.status, 429));
+  await post('/auth/otp/request', { email, purpose: 'reset' }).expect(202);
+  const replacement = 'Updated-test-password-123!';
+  await post('/auth/password/reset', { email, password: replacement, code: sent[0].code }).expect(200);
+  const agent = request.agent(app);
+  await agent.post('/api/auth/login').set('Origin', origin).send({ email: ' TEST@example.COM ', password: replacement }).expect(200);
+  const me = await agent.get('/api/auth/me').expect(200);
+  assert.equal(me.body.user.id, id);
+  await post('/auth/login', { email, password }).expect(401);
 });

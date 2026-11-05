@@ -1,64 +1,26 @@
 import { locale, t as tr } from '../i18n.js'
-import Papa from 'papaparse'
-import ExcelJS from 'exceljs'
 
 export const DAYS = [['MON', 'จันทร์'], ['TUE', 'อังคาร'], ['WED', 'พุธ'], ['THU', 'พฤหัสบดี'], ['FRI', 'ศุกร์']]
 export const TIMES = ['08.00–09.00', '09.00–10.00', '10.00–11.00', '11.00–12.00',
   '13.00–14.00', '14.00–15.00', '15.00–16.00', '16.00–17.00']
 
-// ---------- โหลดและ join ข้อมูล ----------
-// ถ้าชื่อคอลัมน์ใน CSV จริงต่างจากนี้ ให้เพิ่มชื่อที่ถูกต้องในลิสต์ของ pick(...) ด้านล่าง
-const pick = (row, keys, fallback = '') => {
-  for (const k of keys) if (row?.[k] !== undefined && row[k] !== '') return row[k]
-  return fallback
-}
-
-export const parseCsv = (text) =>
-  Papa.parse(text.replace(/^\ufeff/, ''), {
-    header: true, skipEmptyLines: true, transformHeader: (h) => h.trim(),
-  }).data
-
-const index = (rows, key) => Object.fromEntries(rows.map((r) => [String(r[key] ?? '').trim(), r]))
-
-export function joinSessions({ solution, offerings, courses, teachers, groups, rooms }) {
-  const off = index(offerings, 'offering_id')
-  const crs = index(courses, 'course_id')
-  const tch = index(teachers, 'teacher_id')
-  const grp = index(groups, 'group_id')
-  const rm = index(rooms, 'room_id')
-
-  return solution.map((s) => {
-    const o = off[s.offering_id] ?? {}
-    const course_id = pick(o, ['course_id'])
-    const teacher_id = pick(o, ['teacher_id'])
-    const group_id = pick(o, ['group_id'])
-    const c = crs[course_id] ?? {}
+// Export the same authenticated schedule that users see in the timetable view.
+export async function loadExportData(api, sid, method) {
+  const { items } = await api.schedule(sid, method)
+  if (!Array.isArray(items) || !items.length) throw new Error(tr('ยังไม่มีผลลัพธ์ให้ส่งออก'))
+  return items.map(item => {
+    const start = Number(item.start_period), length = Number(item.periods)
+    if (!DAYS.some(([day]) => day === item.day) || !Number.isInteger(start) || !Number.isInteger(length) || start < 1 || length < 1 || start + length - 1 > 8 || (start <= 4 && start + length - 1 > 4)) {
+      throw new Error(tr('ช่วงเวลาของรายการสอนไม่ถูกต้อง', 'Invalid session time') + ': ' + item.offering_id)
+    }
     return {
-      offering_id: s.offering_id,
-      session_no: Number(s.session_no),
-      day: s.day,
-      start_period: Number(s.start_period),
-      // จำนวนคาบของรายการสอนอยู่ใน offerings.csv (periods) · ถ้าไม่มีค่อยลองดูใน courses.csv
-      length: Number(pick(o, ['periods'], pick(c, ['session_length', 'length'], 1))),
-      course_id, course: pick(c, ['course_name', 'name', 'title'], course_id),
-      teacher_id, teacher: pick(tch[teacher_id], ['teacher_name', 'name'], teacher_id),
-      group_id, group: pick(grp[group_id], ['group_name', 'name'], group_id),
-      room_id: s.room_id, room: pick(rm[s.room_id], ['room_name', 'name'], s.room_id),
+      offering_id: item.offering_id, day: item.day, start_period: start, length,
+      course_id: item.course_id, course: item.course_name || item.course_id,
+      teacher_id: item.teacher_id, teacher: item.teacher_name || item.teacher_id,
+      group_id: item.group_id, group: item.group_name || item.group_id,
+      room_id: item.room_id, room: item.room_name || item.room_id,
     }
   })
-}
-
-// ดึงจาก endpoint ที่หน้า Export ใช้อยู่แล้ว (solution + ไฟล์ cleaned)
-export async function loadExportData(api, sid) {
-  const get = async (url) => {
-    const r = await fetch(url)
-    if (!r.ok) throw new Error(`โหลดไม่สำเร็จ: ${url}`)
-    return r.text()
-  }
-  const names = ['offerings.csv', 'courses.csv', 'teachers.csv', 'groups.csv', 'rooms.csv']
-  const [sol, ...rest] = await Promise.all([get(api.solutionUrl(sid)), ...names.map((f) => get(api.cleanedUrl(sid, f)))])
-  const [offerings, courses, teachers, groups, rooms] = rest.map(parseCsv)
-  return joinSessions({ solution: parseCsv(sol), offerings, courses, teachers, groups, rooms })
 }
 
 // ---------- ตัวช่วย ----------
@@ -100,7 +62,7 @@ export function downloadBlob(blob, filename) {
   a.href = url
   a.download = filename
   a.click()
-  URL.revokeObjectURL(url)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 // ---------- XLSX ----------
@@ -159,9 +121,20 @@ function writeGrid(ws, top, title, list, second) {
   return top + 1 + 9 + 2 // เว้น 1 แถวก่อนตารางถัดไป
 }
 
-export async function buildXlsxBlob(sessions) {
+export async function buildXlsxBlob(sessions, datasetName = '') {
+  const { default: ExcelJS } = await import('exceljs')
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'Smart Campus Scheduler'
+  wb.creator = 'Phu Pha Digital Campus'
+  const overview = wb.addWorksheet(tr('สรุปตาราง', 'Timetable summary'))
+  overview.columns = [{ width: 32 }, { width: 45 }]
+  overview.addRows([
+    [tr('ตารางเรียน'), datasetName],
+    [tr('รายการสอน'), sessions.length],
+    [tr('จำนวนคาบ'), sessions.reduce((sum, item) => sum + item.length, 0)],
+    ...VIEWS.map(view => [tr(view.label), new Set(sessions.map(item => item[view.idKey])).size]),
+  ])
+  overview.getRow(1).font = { size: 16, bold: true, color: { argb: 'FF047857' } }
+  overview.getRow(1).height = 32
 
   // ชีตรวม: ตารางรายการ กรองได้
   const all = wb.addWorksheet(tr('รายการทั้งหมด'), { views: [{ state: 'frozen', ySplit: 1 }] })

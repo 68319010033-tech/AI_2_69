@@ -14,6 +14,7 @@ if (typeof document !== 'undefined') document.documentElement.lang = locale.valu
 
 // Source labels remain readable in templates; data values and CSV identifiers are never translated.
 export const translations = {
+    'พบไฟล์ชื่อเดียวกันในชุดนำเข้า': 'Duplicate file name in this import',
     'ตกลง': 'Confirm', 'รายการทั้งหมด': 'All sessions', 'วิชา': 'Course', 'กลุ่ม': 'Group', 'คาบเริ่ม': 'Start period',
     'พักกลางวัน 12.00–13.00': 'Lunch 12:00–13:00', 'ยังไม่ได้เลือกตารางที่จะพิมพ์': 'Select a timetable to print',
     'โหลดชุด "{name}"?': 'Load dataset "{name}"?', 'ลบชุด "{name}"?': 'Delete dataset "{name}"?',
@@ -430,6 +431,8 @@ export function formatDate(value, options) {
 // Import errors can contain a filename or column label. Preserve those values.
 export function importNotice(value) {
     if (typeof value !== 'string') return value
+    const location = value.match(/^(.*?)(?:แถว )(\d+): (.+)$/u)
+    if (location) return location[1] + t('แถวที่', 'Row') + ' ' + location[2] + ': ' + t(location[3])
     const column = value.match(/^กรุณาจับคู่คอลัมน์ (.+)$/u)
     if (column) return message('กรุณาจับคู่คอลัมน์ {column}', { column: t(column[1]) })
     const parts = value.match(/^(.+?): (.+)$/u)
@@ -437,6 +440,7 @@ export function importNotice(value) {
 }
 export function authError(message) {
     const errors = {
+        'Session cookie unavailable. Allow cookies for this website and try again.': 'เบราว์เซอร์ไม่ได้รับคุกกี้สำหรับเข้าสู่ระบบ กรุณาอนุญาตคุกกี้สำหรับเว็บไซต์นี้แล้วลองอีกครั้ง',
         'Invalid email or password': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
         'Please sign in again': 'กรุณาเข้าสู่ระบบอีกครั้ง',
         'Enter a valid email address': 'กรุณากรอกอีเมลให้ถูกต้อง',

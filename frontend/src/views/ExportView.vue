@@ -8,6 +8,8 @@ import PdfPrintDialog from '@/components/PdfPrintDialog.vue'
 
 const store = useSessionStore()
 const sid = computed(() => store.generationSessionId)
+const datasetLabel = computed(() => store.selectedDataset?.id === sid.value ? store.selectedDataset.name : sid.value)
+const exportName = computed(() => 'timetable-' + String(datasetLabel.value || 'schedule').replace(/[^\p{L}\p{N}_-]+/gu, '-').slice(0, 64) + '.xlsx')
 
 const RULES = [
   'ครูไม่สอนซ้อนเวลา',
@@ -36,6 +38,7 @@ const error = ref('')
 // ---------- ส่งออกไฟล์ต่างๆ ----------
 const exporting = ref('') // '' | 'xlsx'
 const exportError = ref('')
+const downloaded = ref('')
 const XLSX_DESC = 'ตารางรายกลุ่ม ครู ห้อง (Excel)'
 
 // ดาวน์โหลดไฟล์จาก backend · ถ้าล้มเหลวให้แจ้งผู้ใช้ (เดิมเงียบ)
@@ -51,9 +54,11 @@ async function dl(url) {
 async function exportXlsx() {
   exporting.value = 'xlsx'
   exportError.value = ''
+  downloaded.value = ''
   try {
-    const sessions = await loadExportData(api, sid.value)
-    downloadBlob(await buildXlsxBlob(sessions), 'timetable.xlsx')
+    const sessions = await loadExportData(api, sid.value, store.method)
+    downloadBlob(await buildXlsxBlob(sessions, datasetLabel.value), exportName.value)
+    downloaded.value = exportName.value
   } catch (e) {
     exportError.value = tr('สร้างไฟล์ไม่สำเร็จ') + ': ' + e.message
   } finally {
@@ -72,7 +77,7 @@ async function openPdf() {
   pdfLoading.value = true
   pdfError.value = ''
   try {
-    pdfSessions.value = await loadExportData(api, sid.value)
+    pdfSessions.value = await loadExportData(api, sid.value, store.method)
   } catch (e) {
     pdfError.value = tr('โหลดข้อมูลตารางไม่สำเร็จ') + ': ' + e.message
   } finally {
@@ -82,7 +87,7 @@ async function openPdf() {
 
 function doPrint(options) {
   try {
-    printPdf(pdfSessions.value, 'ตารางเรียน', options)
+    printPdf(pdfSessions.value, tr('ตารางเรียน') + ' · ' + datasetLabel.value, options)
     pdfOpen.value = false
   } catch (e) {
     pdfError.value = e.message
@@ -128,6 +133,7 @@ const metrics = computed(() =>
     </div>
 
     <template v-else>
+      <p class="mt-5 text-sm font-semibold text-primary-700">{{ tr('ชุดข้อมูล') }} · {{ datasetLabel }}</p>
       <!-- ดาวน์โหลด -->
       <div class="mt-6 grid gap-4 md:grid-cols-3">
         <a :href="api.solutionUrl(sid)" @click.prevent="dl(api.solutionUrl(sid))" download="solution.csv"
@@ -164,6 +170,7 @@ const metrics = computed(() =>
       </div>
 
       <p v-if="exportError" class="mt-3 text-err">❌ {{ exportError }}</p>
+      <p v-else-if="downloaded" role="status" class="mt-3 text-primary-700">{{ tr('เตรียมไฟล์ให้ดาวน์โหลดแล้ว', 'Ready to download') }} · {{ downloaded }}</p>
 
       <!-- ผลตรวจ 12 ข้อ -->
       <div class="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">

@@ -120,3 +120,6 @@ admin checks, session ownership, CSRF and test seeds. Real Firebase, Google cons
 SMTP delivery and deployment TLS require an end-to-end check with your credentials.
 The existing Python scheduling algorithms are retained; authentication tests do not
 validate solver correctness.
+# Email delivery for account recovery
+
+For hosting that blocks outbound SMTP, set `RESEND_API_KEY` and `MAIL_FROM` on the server. Use a sender on a verified Resend domain. Registration, email sign-in and password reset then send codes over HTTPS. If the API key is unset, the existing SMTP settings are used. Do not put mail credentials in frontend settings.

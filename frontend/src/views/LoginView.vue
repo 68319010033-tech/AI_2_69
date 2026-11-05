@@ -1,11 +1,14 @@
 <script setup>
 import { t as tr } from '@/i18n'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { auth, http } from '@/auth'
 import { locale, t, authError } from '@/i18n'
 
 const router = useRouter()
+const route = useRoute()
+const showPassword = ref(false)
+const rejectedPassword = ref(false)
 const mode = ref('login'), step = ref('details')
 const email = ref(''), password = ref(''), name = ref(''), code = ref('')
 const busy = ref(false), error = ref(''), message = ref(''), cooldown = ref(0)
@@ -22,12 +25,17 @@ function renderGoogleButton() {
 }
 watch(locale, renderGoogleButton)
 function changeMode(value) {
+  showPassword.value = false; rejectedPassword.value = false
   mode.value = value; step.value = 'details'; code.value = ''; password.value = ''; error.value = ''; message.value = ''
 }
 async function complete(data) {
-  auth.user = data.user
-  localStorage.removeItem('sessionId')
-  await router.replace(data.user.role === 'admin' ? '/admin' : '/')
+  // Verify that this browser received the session cookie before entering the workspace.
+  const session = await http.get('/auth/me', { _retried: true })
+  if (session.data.user?.id !== data.user.id) throw new Error('Session could not be confirmed')
+  auth.user = session.data.user
+  const target = route.query.next
+  const allowed = typeof target === 'string' && router.getRoutes().some(r => r.path === target && !r.meta.public && (!r.meta.admin || data.user.role === 'admin'))
+  await router.replace(allowed ? target : data.user.role === 'admin' ? '/admin' : '/')
 }
 async function requestCode() {
   await http.post('/auth/otp/request', { email: email.value, purpose: purpose.value })
@@ -49,7 +57,8 @@ async function submit() {
       step.value = 'code'; cooldown.value = 60; message.value = 'Enter the code sent to your email to finish registration.'
     } else await requestCode()
   } catch (e) {
-    error.value = e.response?.data?.message || 'Unable to connect. Please try again.'
+    rejectedPassword.value = mode.value === 'login' && e.response?.status === 401 && e.config?.url === '/auth/login'
+    error.value = e.config?.url === '/auth/me' && e.response?.status === 401 ? 'Session cookie unavailable. Allow cookies for this website and try again.' : e.response?.data?.message || 'Unable to connect. Please try again.'
     if (e.response?.data?.code === 'EMAIL_UNVERIFIED') { mode.value = 'verify'; step.value = 'details' }
   } finally { busy.value = false }
 }
@@ -85,9 +94,13 @@ onMounted(async () => {
       <h1 class="text-3xl font-bold">{{ t(labels[mode]) }}</h1>
       <p class="mt-2 text-sm text-slate-500"> {{ tr("Your workspace for intelligent timetabling.") }} </p>
       <div class="my-6 flex gap-2" :aria-label="tr('Sign-in options')">
-        <button v-for="option in ['login', 'register', 'otp']" :key="option" type="button" :disabled="busy" class="flex-1 rounded-lg border p-2 text-sm" :class="mode === option ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200'" @click="changeMode(option)">{{ t(labels[option]) }}</button>
+        <button v-for="option in ['login', 'register', 'otp']" :key="option" type="button" :aria-pressed="mode === option" :disabled="busy" class="flex-1 rounded-lg border p-2 text-sm" :class="mode === option ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-200'" @click="mode !== option && changeMode(option)">{{ t(labels[option]) }}</button>
       </div>
       <p v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{{ authError(error) }}</p>
+      <div v-if="rejectedPassword" class="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        <button class="text-primary-700 underline" @click="changeMode('reset')">{{ t('กู้รหัสผ่านทางอีเมล','Recover password by email') }}</button>
+        <button class="text-primary-700 underline" @click="changeMode('otp')">{{ t('ใช้รหัสครั้งเดียวแทน','Use a one-time code instead') }}</button>
+      </div>
       <p v-if="message" role="status" class="mb-4 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">{{ t(message) }}</p>
       <form class="space-y-4" @submit.prevent="submit">
         <label v-if="mode === 'register' && step === 'details'" class="block text-sm font-medium"> {{ tr("Name") }} <input v-model="name" autocomplete="name" required maxlength="80" class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
@@ -97,9 +110,10 @@ onMounted(async () => {
         <label v-if="step === 'code'" class="block text-sm font-medium"> {{ tr("Six-digit email code") }} <input v-model="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required class="mt-1 w-full rounded-lg border border-slate-300 p-3 tracking-widest" />
         </label>
         <label v-if="(step === 'details' && ['login', 'register'].includes(mode)) || (step === 'code' && ['reset', 'register', 'verify'].includes(mode))" class="block text-sm font-medium">{{ t(mode === 'reset' ? 'New password' : 'Password') }}
-          <input v-model="password" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" :minlength="mode === 'login' ? 1 : 12" maxlength="128" required class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
+          <input v-model="password" name="password" :type="showPassword ? 'text' : 'password'" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" :minlength="mode === 'login' ? 1 : 12" maxlength="128" required class="mt-1 w-full rounded-lg border border-slate-300 p-3" />
           <span v-if="mode !== 'login'" class="mt-1 block text-xs text-slate-500"> {{ tr("Use 12–128 characters.") }} </span>
         </label>
+        <label v-if="(step === 'details' && ['login', 'register'].includes(mode)) || (step === 'code' && ['reset', 'register', 'verify'].includes(mode))" class="flex items-center gap-2 text-sm"><input v-model="showPassword" type="checkbox" /> {{ t('แสดงรหัสผ่าน','Show password') }}</label>
         <button :disabled="busy" class="w-full rounded-lg bg-primary-700 p-3 font-semibold text-white disabled:opacity-50">{{ t(busy ? 'Please wait…' : step === 'code' ? (mode === 'reset' ? 'Save new password' : 'Verify and sign in') : ['otp', 'reset', 'verify'].includes(mode) ? 'Send email code' : labels[mode]) }}</button>
       </form>
       <div v-if="step === 'code'" class="mt-4 flex justify-between text-sm">

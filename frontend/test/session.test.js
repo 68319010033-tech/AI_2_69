@@ -28,6 +28,15 @@ function setup(api = {}, storage = new Map(), userId = 'test-user') {
 }
 const csvFile = (text) => new File([text], 'groups.csv')
 
+test('a malformed file leaves the entire existing draft unchanged during a batch import', async () => {
+    const store = setup()
+    await store.addFiles([csvFile('group_id,name\nG1,Original')])
+    await store.addFiles([csvFile('group_id,name\nG2,Replacement'), new File(['id,name\nT1,bad,extra'], 'teachers.csv')])
+    assert.equal(store.files['groups.csv'].data[0][1], 'Original')
+    assert.equal(store.files['teachers.csv'], undefined)
+    assert.match(store.error, /teachers\.csv: แถว 2/)
+})
+
 test('edited upload preserves Thai, commas, quotes and line breaks using server parser', async () => {
     let uploaded
     const store = setup({ upload: async files => {

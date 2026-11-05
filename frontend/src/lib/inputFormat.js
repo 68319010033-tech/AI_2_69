@@ -32,28 +32,46 @@ export function detectDelimiter(text) {
     return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]
 }
 
-export function parseTable(text, delimiter = detectDelimiter(text)) {
+export function parseTable(text, delimiter) {
     text = text.replace(/^\uFEFF/, '')
+    const prefix = /^(?:[ \t]*(?:\r\n|\n|\r))+/.exec(text)?.[0] || ''
+    text = text.slice(prefix.length)
+    const excelSeparator = /^sep=([,;\t])(?:\r\n|\n|\r)/i.exec(text)
+    if (excelSeparator) text = text.slice(excelSeparator[0].length)
+    delimiter ??= excelSeparator?.[1] || detectDelimiter(text)
     if (text.includes('\uFFFD')) throw new Error('อ่านตัวอักษรไม่ได้ กรุณาบันทึกไฟล์เป็น UTF-8')
     const rows = []
     let row = [], cell = '', quoted = false, closed = false
+    let line = 1 + (prefix.match(/\r\n|\n|\r/g)?.length || 0) + (excelSeparator ? 1 : 0)
+    const invalid = reason => new Error(`แถว ${line}: ${reason}`)
     const endCell = () => { row.push(cell); cell = ''; closed = false }
-    const endRow = () => { endCell(); if (row.some(value => value.trim() !== '')) rows.push(row); row = [] }
+    const endRow = () => {
+        endCell()
+        if (row.some(value => value.trim() !== '')) {
+            if (rows.length && row.length > rows[0].length) throw invalid('ข้อมูลมีคอลัมน์เกินหัวตาราง กรุณาตรวจตัวคั่นหรือเครื่องหมายคำพูด')
+            rows.push(row)
+        }
+        row = []
+    }
     for (let i = 0; i < text.length; i++) {
         const c = text[i]
         if (quoted) {
             if (c === '"' && text[i + 1] === '"') { cell += '"'; i++ }
             else if (c === '"') { quoted = false; closed = true }
-            else cell += c
+            else {
+                if (c === '\n' || (c === '\r' && text[i + 1] !== '\n')) line++
+                cell += c
+            }
         } else if (c === delimiter) endCell()
         else if (c === '\n' || c === '\r') {
             if (c === '\r' && text[i + 1] === '\n') i++
             endRow()
+            line++
         } else if (c === '"' && cell === '' && !closed) quoted = true
-        else if (closed || c === '"') throw new Error('รูปแบบเครื่องหมายคำพูดในไฟล์ไม่ถูกต้อง')
+        else if (closed || c === '"') throw invalid('รูปแบบเครื่องหมายคำพูดในไฟล์ไม่ถูกต้อง')
         else cell += c
     }
-    if (quoted) throw new Error('รูปแบบ CSV ไม่ถูกต้อง: มีเครื่องหมายคำพูดที่ยังไม่ปิด')
+    if (quoted) throw invalid('รูปแบบ CSV ไม่ถูกต้อง: มีเครื่องหมายคำพูดที่ยังไม่ปิด')
     if (cell !== '' || row.length || closed) endRow()
     const [header = [], ...data] = rows
     const headers = header.map(value => value.trim())
@@ -62,7 +80,6 @@ export function parseTable(text, delimiter = detectDelimiter(text)) {
     const keys = headers.map(value => value.replace(/[.$#[\]/]/g, '_').toLowerCase())
     if (new Set(keys).size !== keys.length) throw new Error('หัวคอลัมน์ซ้ำกัน กรุณาตั้งชื่อให้ไม่ซ้ำ')
     for (const values of data) {
-        if (values.length > headers.length) throw new Error('ข้อมูลมีคอลัมน์เกินหัวตาราง กรุณาตรวจตัวคั่นหรือเครื่องหมายคำพูด')
         while (values.length < headers.length) values.push('')
     }
     return { headers, data, delimiter }

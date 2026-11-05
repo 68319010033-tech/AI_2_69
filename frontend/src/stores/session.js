@@ -185,25 +185,32 @@ export const useSessionStore = defineStore('session', () => {
 
     async function addFiles(fileList) {
         if (editingLocked.value) return
-        remember()
         reading.value = true
         error.value = ''
         try {
-        for (const f of fileList) {
-            const name = f.name.toLowerCase().trim()
-            if (!REQUIRED_FILES.includes(name)) {
-                error.value = `${f.name}: ใช้ “นำเข้าไฟล์รูปแบบอื่น” เพื่อเลือกประเภทและจับคู่คอลัมน์ (ไฟล์ ZIP ให้แตกไฟล์ก่อน)`
-                continue
+            const staged = new Map()
+            for (const f of Array.from(fileList)) {
+                const name = f.name.toLowerCase().trim()
+                if (!REQUIRED_FILES.includes(name)) {
+                    error.value = `${f.name}: ใช้ “นำเข้าไฟล์รูปแบบอื่น” เพื่อเลือกประเภทและจับคู่คอลัมน์ (ไฟล์ ZIP ให้แตกไฟล์ก่อน)`
+                    continue
+                }
+                if (f.size > 10 * 1024 * 1024) throw new Error(`${name}: ไฟล์ต้องมีขนาดไม่เกิน 10 MB`)
+                try {
+                    if (staged.has(name)) throw new Error('พบไฟล์ชื่อเดียวกันในชุดนำเข้า')
+                    const { headers, data } = parseTable(await f.text())
+                    staged.set(name, { rows: data.length, headers, data })
+                } catch (e) { throw new Error(`${name}: ${e.message}`, { cause: e }) }
             }
-            if (f.size > 10 * 1024 * 1024) throw new Error(`${name}: ไฟล์ต้องมีขนาดไม่เกิน 10 MB`)
-            const text = await f.text()
-            const { headers, data } = parseTable(text)
-            if (!headers.length) throw new Error(`${name}: ไม่พบหัวตาราง`)
-            invalidateResults()
-            files.value[name] = { file: f, rows: data.length, headers, data }
-            clearFileIssues(name)
-            saveDraft()
-        }
+            if (staged.size) {
+                remember()
+                invalidateResults()
+                for (const [name, entry] of staged) {
+                    files.value[name] = entry
+                    clearFileIssues(name)
+                }
+                saveDraft()
+            }
         } catch (e) {
             error.value = e.message || 'อ่านไฟล์ไม่สำเร็จ'
         } finally {

@@ -74,7 +74,9 @@ router.get('/export/:sid/solution.csv', ah(async (req, res) => {
   const asg = method ? db.arr(await db.get(`schedules/${req.params.sid}/${method}`)) : [];
   if (!asg.length) return res.status(404).json({ error: 'No schedule generated yet' });
   asg.sort((a, b) => a.offering_id.localeCompare(b.offering_id));
-  csvOut(res, 'solution.csv', ['offering_id,day,start_period,room_id', ...asg.map((a) => `${a.offering_id},${a.day},${a.start_period},${a.room_id}`)].join('\r\n') + '\r\n');
+  const columns = ['offering_id', 'day', 'start_period', 'room_id'];
+  const escape = value => /[",\r\n]/.test(String(value)) ? `"${String(value).replace(/"/g, '""')}"` : String(value ?? '');
+  csvOut(res, 'solution.csv', [columns.join(','), ...asg.map(a => columns.map(key => escape(a[key])).join(','))].join('\r\n') + '\r\n');
 }));
 
 // GET /api/export/:sid/report.md  (human-readable report)

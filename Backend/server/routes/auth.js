@@ -22,7 +22,13 @@ async function issueOtp(id, purpose) {
   if (!result.committed) return;
   try { await mail.sendOtp(result.value.email, code, purpose); }
   catch (e) {
-    await db.transaction(a.accountPath(id), u => { if (u?.otps?.[purpose]?.nonce !== nonce) return; delete u.otps[purpose]; return u; });
+    await db.transaction(a.accountPath(id), u => {
+      if (u?.otps?.[purpose]?.nonce !== nonce) return;
+      delete u.otps[purpose];
+      if (u.lastOtpAt === now) delete u.lastOtpAt;
+      u.mailTimes = (u.mailTimes || []).filter(time => time !== now);
+      return u;
+    });
     throw a.fail(503, 'Unable to send email. Try again later.');
   }
 }
@@ -67,6 +73,7 @@ router.post('/password/reset', ah(async (req, res) => {
   const id = a.emailKey(a.emailOf(req.body.email));
   const passwordHash = await a.hashPassword(a.checkPassword(req.body.password));
   await consumeOtp(id, 'reset', req.body.code, u => { u.passwordHash = passwordHash; u.sessions = {}; u.otps = {}; return u; });
+  await db.remove(`authLoginAttempts/${id}`);
   a.clearCookies(res); res.json({ message: 'Password updated. Sign in with your new password.' });
 }));
 router.post('/login', ah(async (req, res) => {

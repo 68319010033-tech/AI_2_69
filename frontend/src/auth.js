@@ -13,9 +13,12 @@ http.interceptors.response.use(r => r, async error => {
       refreshPromise ||= http.post('/auth/refresh').finally(() => { refreshPromise = null })
       auth.user = (await refreshPromise).data.user
       return http(config)
-    } catch {
-      auth.user = null
-      if (window.location.pathname !== '/login') window.location.assign('/login')
+    } catch (refreshError) {
+      if (refreshError.response?.status === 401) {
+        auth.user = null
+        if (config.url !== '/auth/me' && window.location.pathname !== '/login') window.location.replace('/login?next=' + encodeURIComponent(window.location.pathname))
+      }
+      return Promise.reject(refreshError)
     }
   }
   return Promise.reject(error)
@@ -40,6 +43,6 @@ export async function downloadFile(url) {
     anchor.click()
     setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
   } catch {
-    window.alert('Unable to download this file. Check your session and try again.')
+    throw new Error('Unable to download this file. Check your session and try again.')
   }
 }
