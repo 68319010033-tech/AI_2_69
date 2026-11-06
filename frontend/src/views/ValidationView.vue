@@ -1,12 +1,12 @@
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import DataEditor from '@/components/DataEditor.vue'
 import IssueCorrection from '@/components/IssueCorrection.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import { api } from '@/api'
-import { t } from '@/i18n'
+import { t, formatDate } from '@/i18n'
 const store = useSessionStore()
 const router = useRouter()
 const editor = ref(null)
@@ -29,6 +29,8 @@ async function saveAndContinue() {
     } catch (error) { datasetError.value = error.response?.data?.message || 'Unable to save dataset. Please retry.' }
     finally { savingDataset.value = false }
 }
+// ตั้งชื่อเริ่มต้นให้เมื่อข้อมูลผ่าน จะได้กดไปต่อได้ทันที (แก้ชื่อเองได้)
+const defaultName = () => `${t('ชุดข้อมูล', 'Dataset')} ${formatDate(new Date(), { dateStyle: 'medium', timeStyle: 'short' })}`
 const severity = ref('all')
 const search = ref('')
 const fileFilter = ref('all')
@@ -44,17 +46,22 @@ const errorCount = computed(() => review.value.filter(issue => issue.severity ==
 const canNext = computed(() => store.validated && !store.dirty && !store.editingLocked && !store.validateError)
 
 const state = computed(() => store.editingLocked ? 'busy' : store.dirty ? 'dirty' : store.validated ? 'ok' : store.stats ? 'error' : 'idle')
-const needsEdit = computed(() => !store.validated || store.dirty || errorCount.value > 0)
-// ส่วนแก้ไขข้อมูลพับไว้เมื่อข้อมูลผ่านแล้ว · ผู้ใช้กดเปิด/ปิดเองได้ และเปิดให้อัตโนมัติเมื่อมีปัญหา
-const editorForced = ref(null)
-const editorOpen = computed(() => editorForced.value ?? needsEdit.value)
-watch(needsEdit, () => { editorForced.value = null })
-async function locate(issue) {
-    editorForced.value = true
-    await nextTick()
-    editor.value?.focusIssue(issue)
-}
+const tiles = computed(() => {
+    const has = !!(store.stats || review.value.length)
+    const files = Object.keys(store.files).length
+    return [
+        { key: 'files', hue: 205, icon: 'file', label: 'ไฟล์พร้อมใช้งาน', value: `${files}`, unit: '/ 10',
+          note: files >= 10 ? 'ครบทุกไฟล์แล้ว' : `ยังขาด ${10 - files} ไฟล์` },
+        { key: 'offerings', hue: 265, icon: 'calendar', label: 'รายการสอน', value: store.stats ? `${store.stats.offerings}` : '—', unit: '',
+          note: store.stats ? `รวม ${store.stats.periods} คาบต่อสัปดาห์` : 'รอตรวจสอบ' },
+        { key: 'errors', hue: !has ? 215 : errorCount.value > 0 ? 350 : 150, icon: errorCount.value > 0 ? 'circle-x' : 'circle-check', label: 'ข้อผิดพลาด', value: has ? `${errorCount.value}` : '—', unit: '',
+          note: !has ? 'รอตรวจสอบ' : errorCount.value > 0 ? 'ต้องแก้ไขก่อนไปต่อ' : 'ไม่พบข้อผิดพลาด' },
+        { key: 'warnings', hue: !has ? 215 : warningCount.value > 0 ? 38 : 150, icon: warningCount.value > 0 ? 'alert' : 'circle-check', label: 'คำเตือน', value: has ? `${warningCount.value}` : '—', unit: '',
+          note: !has ? 'รอตรวจสอบ' : warningCount.value > 0 ? 'ควรตรวจดู (ไปต่อได้)' : 'ไม่มีคำเตือน' },
+    ]
+})
 const checkLabel = computed(() => store.uploading ? 'กำลังบันทึก…' : store.validating ? 'กำลังตรวจสอบข้อมูล…' : state.value === 'ok' ? 'ตรวจสอบอีกครั้ง' : 'บันทึกและตรวจสอบ')
+watch(canNext, (ready) => { if (ready && !datasetName.value.trim()) datasetName.value = defaultName() }, { immediate: true })
 async function check() {
     if (store.editingLocked) return
     if (store.dirty || !store.sessionId) { if (!await store.upload()) return }
@@ -71,7 +78,7 @@ onMounted(async () => {
         <p class="mt-1 text-slate-500">{{ t('ตรวจสอบไฟล์ที่อัปโหลด แก้ไขจุดที่มีปัญหา แล้วบันทึกเป็นชุดข้อมูลเพื่อใช้จัดตาราง', 'Check your uploaded files, fix any problems, then save them as a dataset for scheduling.') }}</p>
 
         <!-- สถานะ -->
-        <section class="product-card mt-5" aria-live="polite">
+        <section class="product-card mt-5" :class="{ 'bg-green-50': state === 'ok', 'bg-red-50': state === 'error', 'bg-amber-50': state === 'dirty' }" aria-live="polite">
             <div class="flex flex-wrap items-center gap-4">
                 <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                     :class="{ 'bg-green-50 text-green-700': state === 'ok', 'bg-red-50 text-red-700': state === 'error', 'bg-amber-50 text-amber-700': state === 'dirty' || state === 'idle', 'bg-slate-50 text-slate-500': state === 'busy' }">
@@ -95,30 +102,26 @@ onMounted(async () => {
                 </div>
                 <button :disabled="!store.canNext || store.editingLocked"
                     class="whitespace-nowrap rounded-lg px-5 py-2.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-40"
-                    :class="state === 'ok' ? 'border border-slate-300 text-slate-600 hover:border-primary-500 hover:text-primary-700' : 'bg-primary-700 text-white hover:bg-primary-600'"
+                    :class="state === 'ok' ? 'border border-slate-200 text-sm text-slate-500 hover:border-primary-500 hover:text-primary-700' : 'bg-primary-700 text-white hover:bg-primary-600'"
                     @click="check">{{ t(checkLabel) }}</button>
             </div>
 
-            <dl class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div class="rounded-lg bg-slate-50 p-3">
-                    <dt class="text-xs text-slate-500">{{ t('ไฟล์พร้อมใช้งาน') }}</dt>
-                    <dd class="mt-1 text-xl font-bold">{{ Object.keys(store.files).length }} <span class="text-sm font-normal text-slate-400">/ 10</span></dd>
-                </div>
-                <div class="rounded-lg bg-slate-50 p-3">
-                    <dt class="text-xs text-slate-500">{{ t('รายการสอน / คาบรวม') }}</dt>
-                    <dd class="mt-1 text-xl font-bold">{{ store.stats ? `${store.stats.offerings} / ${store.stats.periods}` : '—' }}</dd>
-                </div>
-                <div class="rounded-lg p-3" :class="errorCount > 0 ? 'bg-red-50' : 'bg-slate-50'">
-                    <dt class="text-xs text-slate-500">{{ t('ข้อผิดพลาด') }}</dt>
-                    <dd class="mt-1 text-xl font-bold" :class="errorCount > 0 ? 'text-red-700' : ''">{{ store.stats || review.length ? errorCount : '—' }}</dd>
-                </div>
-                <div class="rounded-lg p-3" :class="warningCount > 0 ? 'bg-amber-50' : 'bg-slate-50'">
-                    <dt class="text-xs text-slate-500">{{ t('คำเตือน') }}</dt>
-                    <dd class="mt-1 text-xl font-bold" :class="warningCount > 0 ? 'text-amber-700' : ''">{{ store.stats || review.length ? warningCount : '—' }}</dd>
-                </div>
-            </dl>
+            
             <p v-if="store.missing.length" class="mt-3 text-sm text-amber-700">{{ t('ยังไม่ได้อัปโหลด') }} {{ store.missing.join(', ') }}</p>
         </section>
+
+        <!-- ตัวเลขสรุป -->
+        <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div v-for="tile in tiles" :key="tile.key" class="stat-tile" :style="{ '--h': tile.hue }">
+                <div class="flex items-center gap-2.5">
+                    <span class="stat-icon"><AppIcon :name="tile.icon" :size="18" /></span>
+                    <span class="stat-label">{{ t(tile.label) }}</span>
+                </div>
+                <p class="mt-3 text-4xl font-extrabold leading-none tracking-tight">{{ tile.value }}<span v-if="tile.unit" class="ml-1 text-base font-semibold opacity-60">{{ tile.unit }}</span></p>
+                <p class="stat-note mt-2">{{ t(tile.note) }}</p>
+                <AppIcon :name="tile.icon" :size="84" class="stat-ghost" />
+            </div>
+        </div>
 
         <p v-if="store.error || store.validateError" role="alert" class="mt-4 rounded-lg bg-red-50 p-3 text-red-700">{{ t(store.error || store.validateError) }}</p>
 
@@ -129,11 +132,12 @@ onMounted(async () => {
             <div class="mt-4 flex flex-col gap-3 sm:flex-row">
                 <input id="dataset-name" v-model="datasetName" maxlength="80" :disabled="savingDataset"
                     :aria-label="t('Dataset name')" :placeholder="t('เช่น ภาคเรียนที่ 1 — ข้อมูลพร้อมใช้', 'e.g. Semester 1 — final data')"
-                    class="w-full rounded-lg border border-slate-300 bg-white p-3" @keydown.enter="saveAndContinue" />
+                    class="w-full rounded-lg border border-slate-300 bg-white p-3" @focus="$event.target.select()" @keydown.enter="saveAndContinue" />
                 <button :disabled="!datasetName.trim() || savingDataset" class="product-button shrink-0 px-6 py-3" @click="saveAndContinue">
                     {{ t(savingDataset ? 'กำลังบันทึก…' : 'บันทึกและไปจัดตาราง →', savingDataset ? 'Saving dataset…' : 'Save and continue →') }}
                 </button>
             </div>
+            <p v-if="!datasetName.trim()" class="mt-3 text-sm text-amber-700">{{ t('ตั้งชื่อชุดข้อมูลก่อน จึงจะไปต่อได้', 'Enter a dataset name to continue.') }}</p>
             <p v-if="datasetError" role="alert" class="mt-3 text-sm text-red-700">{{ t(datasetError) }}</p>
         </section>
 
@@ -157,22 +161,15 @@ onMounted(async () => {
                     <tbody><tr v-for="(issue, index) in rows" :key="index" class="border-t border-slate-200 align-top" :class="issue.severity === 'error' ? 'bg-red-50 text-red-800' : 'text-slate-700'">
                         <td class="p-2.5 whitespace-nowrap">{{ issue.file }} / {{ issue.row ?? '—' }}</td><td class="p-2.5">{{ issue.column || '—' }}</td>
                         <td class="p-2.5"><span class="font-semibold">{{ t(issue.severity === 'error' ? 'ข้อผิดพลาด' : issue.severity === 'warning' ? 'คำเตือน' : 'ข้อมูลเพิ่มเติม') }}:</span> {{ issue.message }}<p class="mt-1 font-medium">{{ t("How to fix") }}: {{ issue.suggestion || t("Check this value against the related data file, then validate again.") }}</p></td>
-                        <td class="p-2.5"><IssueCorrection v-if="store.files[issue.file + '.csv']" :issue="issue" @locate="locate(issue)" @recheck="check" /><RouterLink v-else to="/upload" class="underline">{{ t('อัปโหลดไฟล์') }}</RouterLink></td>
+                        <td class="p-2.5"><IssueCorrection v-if="store.files[issue.file + '.csv']" :issue="issue" @locate="editor?.focusIssue(issue)" @recheck="check" /><RouterLink v-else to="/upload" class="underline">{{ t('อัปโหลดไฟล์') }}</RouterLink></td>
                     </tr></tbody>
                 </table>
                 <p v-if="!rows.length" class="p-3 text-slate-500">{{ t('ไม่พบรายการ') }}</p>
             </div>
         </section>
 
-        <!-- แก้ไขข้อมูล (พับไว้เมื่อข้อมูลผ่านแล้ว) -->
-        <details class="product-card mt-5" :open="editorOpen" @toggle="editorForced = $event.target.open">
-            <summary class="flex list-none items-center justify-between gap-3 font-semibold">
-                <span>{{ t('แก้ไขข้อมูล / นำเข้าไฟล์', 'Edit data / import files') }}
-                    <span v-if="!needsEdit" class="ml-2 text-sm font-normal text-slate-500">{{ t('ไม่จำเป็น — ข้อมูลผ่านแล้ว', 'Optional — your data passed') }}</span></span>
-                <AppIcon name="chevron" :size="18" class="transition [details[open]_&]:rotate-180" />
-            </summary>
-            <DataEditor ref="editor" />
-        </details>
+        <!-- แก้ไขข้อมูล -->
+        <DataEditor ref="editor" />
 
         <!-- รายงานการล้างข้อมูล -->
         <details v-if="store.log.length || (store.stats && !store.dirty)" class="product-card mt-5">

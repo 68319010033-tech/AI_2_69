@@ -76,9 +76,10 @@ async function focusIssue(issue) {
 defineExpose({ focusIssue })
 </script>
 <template>
-    <section ref="root" class="mt-4">
+    <section ref="root" class="mt-8">
         <ConfirmDialog :open="!!pendingDelete" :title="t('ลบแถว')" :message="t('Remove this row? You can undo this change.')" :confirm-text="t('ลบแถว')" :cancel-text="t('Cancel')" danger @confirm="deleteRow" @cancel="pendingDelete = null" />
 <button class="float-right rounded-lg border px-4 py-2 disabled:opacity-40" :disabled="!store.canUndo" @click="store.undo()">{{ t('Undo last edit') }}</button>
+        <h2 class="text-lg font-semibold">{{ t('แก้ไขข้อมูล') }}</h2>
         <p class="mt-1 text-sm text-slate-500">{{ t('ช่องสีแดงคือค่าที่ตรวจพบข้อผิดพลาด แก้ไขแล้วกดบันทึกและตรวจสอบอีกครั้ง') }}</p>
         <p v-if="store.dirty" class="mt-2 text-sm text-amber-700">{{ t('แสดงข้อผิดพลาดจากการตรวจครั้งล่าสุด กรุณาตรวจใหม่หลังแก้ไข') }}</p>
         <p class="mt-2 text-sm text-slate-500" role="status">{{ t(store.draftStatus) }}</p>
